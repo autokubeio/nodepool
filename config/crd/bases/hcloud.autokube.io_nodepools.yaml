@@ -1,0 +1,383 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: nodepools.hcloud.autokube.io
+spec:
+  group: hcloud.autokube.io
+  names:
+    kind: NodePool
+    listKind: NodePoolList
+    plural: nodepools
+    shortNames:
+    - np
+    singular: nodepool
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.provider
+      name: Provider
+      type: string
+    - jsonPath: .spec.hetznerConfig.serverType
+      name: ServerType
+      type: string
+    - jsonPath: .spec.hetznerConfig.location
+      name: Location
+      type: string
+    - jsonPath: .spec.minNodes
+      name: Min
+      type: integer
+    - jsonPath: .spec.maxNodes
+      name: Max
+      type: integer
+    - jsonPath: .status.currentNodes
+      name: Current
+      type: integer
+    - jsonPath: .status.readyNodes
+      name: Ready
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: NodePool is the Schema for the nodepools API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NodePoolSpec defines the desired state of NodePool
+            properties:
+              autoScalingEnabled:
+                default: true
+                description: AutoScalingEnabled enables automatic scaling based on
+                  cluster load
+                type: boolean
+              bootstrap:
+                description: Bootstrap contains cluster bootstrap configuration for
+                  automatic node joining
+                properties:
+                  apiServerEndpoint:
+                    description: |-
+                      APIServerEndpoint is the endpoint of the Kubernetes API server
+                      Required for kubeadm clusters
+                    type: string
+                  autoGenerateToken:
+                    default: true
+                    description: AutoGenerateToken indicates whether to automatically
+                      generate bootstrap tokens
+                    type: boolean
+                  k3sConfig:
+                    description: K3sConfig contains k3s-specific configuration
+                    properties:
+                      serverURL:
+                        description: ServerURL is the k3s server URL
+                        type: string
+                      tokenSecretRef:
+                        description: TokenSecretRef references the secret containing
+                          the k3s token
+                        properties:
+                          key:
+                            default: token
+                            description: Key is the key in the secret containing the
+                              token
+                            type: string
+                          name:
+                            description: Name is the name of the secret
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    required:
+                    - serverURL
+                    type: object
+                  kubernetesVersion:
+                    default: "1.29"
+                    description: KubernetesVersion specifies the Kubernetes version
+                      to install (e.g., "1.29", "1.30")
+                    type: string
+                  rke2Config:
+                    description: RKE2Config contains RKE2-specific configuration
+                    properties:
+                      serverURL:
+                        description: ServerURL is the RKE2 server URL
+                        type: string
+                      tokenSecretRef:
+                        description: TokenSecretRef references the secret containing
+                          the RKE2 token
+                        properties:
+                          key:
+                            default: token
+                            description: Key is the key in the secret containing the
+                              token
+                            type: string
+                          name:
+                            description: Name is the name of the secret
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    required:
+                    - serverURL
+                    type: object
+                  talosConfig:
+                    description: TalosConfig contains Talos-specific configuration
+                    properties:
+                      configSecretRef:
+                        description: ConfigSecretRef references the secret containing
+                          Talos machine config
+                        properties:
+                          key:
+                            default: token
+                            description: Key is the key in the secret containing the
+                              token
+                            type: string
+                          name:
+                            description: Name is the name of the secret
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      controlPlaneEndpoint:
+                        description: ControlPlaneEndpoint is the Talos control plane
+                          endpoint
+                        type: string
+                    required:
+                    - controlPlaneEndpoint
+                    type: object
+                  tokenSecretRef:
+                    description: |-
+                      TokenSecretRef is a reference to a secret containing the bootstrap token
+                      The secret should have keys: token, ca-cert-hash (for kubeadm)
+                    properties:
+                      key:
+                        default: token
+                        description: Key is the key in the secret containing the token
+                        type: string
+                      name:
+                        description: Name is the name of the secret
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    default: kubeadm
+                    description: Type is the type of cluster (kubeadm, k3s, talos,
+                      rke2)
+                    enum:
+                    - kubeadm
+                    - k3s
+                    - talos
+                    - rke2
+                    - rancher
+                    type: string
+                type: object
+              cloudInit:
+                description: CloudInit is the cloud-init configuration for node initialization
+                type: string
+              firewallRules:
+                description: FirewallRules contains custom firewall rules to apply
+                items:
+                  description: FirewallRule defines a single firewall rule
+                  properties:
+                    description:
+                      description: Description is a human-readable description
+                      type: string
+                    port:
+                      description: Port is the port or port range (e.g., "80", "8080:8090")
+                      type: string
+                    protocol:
+                      default: tcp
+                      description: Protocol is the protocol (tcp, udp)
+                      type: string
+                  required:
+                  - port
+                  type: object
+                type: array
+              hetznerConfig:
+                description: |-
+                  HetznerConfig contains Hetzner Cloud specific configuration
+                  Required when provider is "hetzner"
+                properties:
+                  image:
+                    description: Image is the OS image to use for nodes (e.g., ubuntu-22.04)
+                    type: string
+                  location:
+                    description: Location is the Hetzner Cloud location (e.g., nbg1,
+                      fsn1, hel1)
+                    type: string
+                  network:
+                    description: Network is the Hetzner Cloud network ID or name to
+                      attach nodes to
+                    type: string
+                  serverType:
+                    description: ServerType is the Hetzner Cloud server type (e.g.,
+                      cx11, cpx21)
+                    type: string
+                required:
+                - image
+                - location
+                - serverType
+                type: object
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels are additional labels to apply to cloud provider
+                  resources
+                type: object
+              maxNodes:
+                default: 10
+                description: MaxNodes is the maximum number of nodes in the pool
+                minimum: 1
+                type: integer
+              minNodes:
+                default: 1
+                description: MinNodes is the minimum number of nodes in the pool
+                minimum: 0
+                type: integer
+              provider:
+                default: hetzner
+                description: Provider is the cloud provider (e.g., hetzner)
+                enum:
+                - hetzner
+                type: string
+              runCmd:
+                description: RunCmd contains commands to run after node initialization
+                items:
+                  type: string
+                type: array
+              scaleDownThreshold:
+                default: 30
+                description: ScaleDownThreshold is the CPU utilization percentage
+                  to trigger scale down
+                maximum: 100
+                minimum: 0
+                type: integer
+              scaleUpThreshold:
+                default: 5
+                description: ScaleUpThreshold is the number of pending pods to trigger
+                  scale up
+                minimum: 1
+                type: integer
+              sshKeys:
+                description: SSHKeys is a list of SSH key IDs or names to add to the
+                  nodes
+                items:
+                  type: string
+                type: array
+              targetNodes:
+                description: TargetNodes is the desired number of nodes
+                minimum: 0
+                type: integer
+            required:
+            - autoScalingEnabled
+            - maxNodes
+            - minNodes
+            - provider
+            type: object
+          status:
+            description: NodePoolStatus defines the observed state of NodePool
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the node pool's state
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              currentNodes:
+                description: CurrentNodes is the current number of nodes in the pool
+                type: integer
+              lastScaleTime:
+                description: LastScaleTime is the last time the pool was scaled
+                format: date-time
+                type: string
+              nodes:
+                description: Nodes is a list of node names in the pool
+                items:
+                  type: string
+                type: array
+              phase:
+                description: Phase represents the current phase of the node pool
+                type: string
+              readyNodes:
+                description: ReadyNodes is the number of ready nodes
+                type: integer
+            required:
+            - currentNodes
+            - readyNodes
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

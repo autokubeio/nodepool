@@ -1,0 +1,53 @@
+apiVersion: hcloud.autokube.io/v1alpha1
+kind: NodePool
+metadata:
+  name: worker-pool-rke2
+  namespace: default
+spec:
+  # Cloud provider - currently supports: hetzner
+  provider: hetzner
+  
+  # Hetzner Cloud specific configuration
+  hetznerConfig:
+    serverType: cpx22
+    location: nbg1
+    image: ubuntu-22.04
+    network: "network-1"
+  
+  minNodes: 1
+  maxNodes: 8
+  targetNodes: 2
+  autoScalingEnabled: true
+  
+  # Automatic cluster joining with RKE2/Rancher
+  bootstrap:
+    type: rke2
+    rke2Config:
+      serverURL: "https://rke2-server:9345"
+      tokenSecretRef:
+        name: rke2-token
+        key: token
+  
+  labels:
+    role: worker
+    cluster-type: rke2
+
+  firewallRules:
+    - port: "80"
+      protocol: tcp
+      description: "HTTP traffic"
+    - port: "443"
+      protocol: tcp
+      description: "HTTPS traffic"
+    
+  sshKeys:
+    - my-ssh-key
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rke2-token
+  namespace: default
+type: Opaque
+stringData:
+  token: "K10ec71ac7a7dd499dbd84877d8ac5c38c024f60d5fd56e0b77fb0618e7e0e696aa::server:f4b513cfb86c86b2d7d3d2f1a434eeea"

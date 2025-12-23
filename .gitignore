@@ -1,0 +1,40 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+testbin/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+coverage.html
+
+# Kubernetes Generated files
+*.swo
+*.swn
+*.swp
+*~
+
+# editor and IDE paraphernalia
+.idea
+*.swp
+*.swo
+*~
+.vscode
+
+# Helm
+*.tgz
+.helm
+
+# Build artifacts
+dist/
+
+# Debug binaries
+__debug_bin*
+.env

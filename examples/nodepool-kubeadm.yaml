@@ -1,0 +1,52 @@
+apiVersion: hcloud.autokube.io/v1alpha1
+kind: NodePool
+metadata:
+  name: worker-pool-kubeadm
+  namespace: default
+spec:
+  # Cloud provider - currently supports: hetzner
+  provider: hetzner
+  
+  # Hetzner Cloud specific configuration
+  hetznerConfig:
+    serverType: cpx11
+    location: nbg1
+    image: ubuntu-22.04
+    network: "network-1"  # Network name or ID
+  
+  minNodes: 1
+  maxNodes: 5
+  targetNodes: 2
+  autoScalingEnabled: true
+  scaleUpThreshold: 5
+  scaleDownThreshold: 30
+  
+  # Automatic cluster joining with kubeadm
+  bootstrap:
+    type: kubeadm
+    autoGenerateToken: true
+    kubernetesVersion: "1.32"  # Kubernetes version to install
+    # Optional: override API server endpoint
+    # apiServerEndpoint: "10.0.0.1:6443"
+  
+  labels:
+    role: worker
+    environment: production
+  
+  # Firewall rules
+  firewallRules:
+    - port: "80"
+      protocol: tcp
+      description: "HTTP traffic"
+    - port: "443"
+      protocol: tcp
+      description: "HTTPS traffic"
+  
+  # Commands to run after initialization
+  runCmd:
+    - echo "Custom setup starting..."
+    - apt-get install -y htop vim
+    - echo "Custom setup completed"
+    
+  sshKeys:
+    - my-ssh-key

@@ -1,0 +1,55 @@
+apiVersion: hcloud.autokube.io/v1alpha1
+kind: NodePool
+metadata:
+  name: example-nodepool
+  namespace: default
+spec:
+  # Cloud provider - currently supports: hetzner
+  # Future: aws, gcp, azure
+  provider: hetzner
+  
+  # Hetzner Cloud specific configuration
+  hetznerConfig:
+    # Server type options: cx22, cx32, cx42, cx52
+    #                      cpx11, cpx21, cpx31, cpx41, cpx51
+    #                      ccx13, ccx23, ccx33, ccx43, ccx53, ccx63
+    serverType: cx23
+    
+    # Location options: nbg1 (Nuremberg), fsn1 (Falkenstein), hel1 (Helsinki), ash (Ashburn)
+    location: nbg1
+    
+    # OS image options: ubuntu-22.04, ubuntu-20.04, debian-11, debian-10, centos-stream-9, etc.
+    image: ubuntu-22.04
+    
+    # Optional: Hetzner Cloud network name or ID
+    # network: my-network
+  
+  # Scaling configuration
+  minNodes: 2
+  maxNodes: 5
+  targetNodes: 2  # Optional: Set initial target, otherwise uses minNodes
+  
+  # Auto-scaling settings
+  autoScalingEnabled: true
+  scaleUpThreshold: 5      # Scale up when this many pods are pending
+  scaleDownThreshold: 30   # Scale down when CPU usage is below this percentage
+  
+  # SSH keys (must exist in your Hetzner Cloud account)
+  sshKeys:
+    - my-ssh-key
+  
+  # Custom labels for cloud provider resources
+  labels:
+    environment: development
+    managed-by: scale
+  
+  # Optional: Cloud-init configuration for node setup
+  cloudInit: |
+    #cloud-config
+    package_update: true
+    package_upgrade: true
+    packages:
+      - curl
+      - wget
+    runcmd:
+      - echo "Node initialized" > /tmp/init-complete

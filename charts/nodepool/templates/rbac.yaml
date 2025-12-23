@@ -1,0 +1,76 @@
+{{- if .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "scale.fullname" . }}-manager-role
+  labels:
+    {{- include "scale.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - hcloud.autokube.io
+  resources:
+  - nodepools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hcloud.autokube.io
+  resources:
+  - nodepools/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hcloud.autokube.io
+  resources:
+  - nodepools/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - pods/eviction
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "scale.fullname" . }}-manager-rolebinding
+  labels:
+    {{- include "scale.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "scale.fullname" . }}-manager-role
+subjects:
+- kind: ServiceAccount
+  name: {{ include "scale.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}

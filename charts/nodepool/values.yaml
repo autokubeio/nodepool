@@ -1,0 +1,83 @@
+# Default values for scale.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/autokubeio/nodepool
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Hetzner Cloud API token (required)
+# Can be set via --set hcloudToken=<your-token>
+# Or create a secret manually and set hcloudTokenSecret
+hcloudToken: ""
+
+# Use an existing secret for the Hetzner Cloud token
+# The secret should have a key named "token"
+hcloudTokenSecret: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  fsGroup: 65532
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 8080
+  healthPort: 8081
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Leader election for high availability
+leaderElection:
+  enabled: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Prometheus monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+
+# RBAC settings
+rbac:
+  create: true

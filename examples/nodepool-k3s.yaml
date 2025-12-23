@@ -1,0 +1,52 @@
+apiVersion: hcloud.autokube.io/v1alpha1
+kind: NodePool
+metadata:
+  name: worker-pool-k3s
+  namespace: default
+spec:
+  # Cloud provider - currently supports: hetzner
+  provider: hetzner
+  
+  # Hetzner Cloud specific configuration
+  hetznerConfig:
+    serverType: cpx21
+    location: nbg1  # Changed from fsn1 (Nuremberg datacenter)
+    image: ubuntu-22.04
+  
+  minNodes: 1
+  maxNodes: 10
+  targetNodes: 2
+  autoScalingEnabled: true
+  
+  # Automatic cluster joining with k3s
+  bootstrap:
+    type: k3s
+    k3sConfig:
+      serverURL: "https://k3s-server:6443"
+      tokenSecretRef:
+        name: k3s-token
+        key: token
+  
+  labels:
+    role: worker
+    cluster-type: k3s
+
+  firewallRules:
+    - port: "80"
+      protocol: tcp
+      description: "HTTP traffic"
+    - port: "443"
+      protocol: tcp
+      description: "HTTPS traffic"
+    
+  sshKeys:
+    - my-ssh-key
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: k3s-token
+  namespace: default
+type: Opaque
+stringData:
+  token: "K10553fcb4de68d26de6e2e8ade38f0e22a188c34f22dd6bd88746b9592604c34ae::server:d904fa2d170c69c5d6cbf0d401393171"
