@@ -92,7 +92,7 @@ helm install nodepool-operator nodepool/nodepool \
 
 ```bash
 kubectl get pods -n nodepool-system
-kubectl get crd nodepools.hcloud.autokube.io
+kubectl get crd nodepools.autokube.io
 ```
 
 ### Manual Installation
@@ -115,7 +115,7 @@ kubectl create secret generic hcloud-credentials \
 1. **Apply the CRD:**
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/autokubeio/nodepool/main/config/crd/bases/hcloud.autokube.io_nodepools.yaml
+kubectl apply -f https://raw.githubusercontent.com/autokubeio/nodepool/main/config/crd/bases/autokube.io_nodepools.yaml
 ```
 
 2. **Create the namespace and secret:**
@@ -144,7 +144,7 @@ kubectl apply -f https://raw.githubusercontent.com/autokubeio/nodepool/main/conf
 Create a node pool with automatic scaling:
 
 ```yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: worker-pool
@@ -179,7 +179,7 @@ kubectl apply -f nodepool.yaml
 ### Advanced Example with Cloud-Init
 
 ```yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: production-pool
@@ -234,7 +234,7 @@ The operator supports **automatic node joining** for multiple Kubernetes distrib
 For standard kubeadm clusters, the operator automatically generates bootstrap tokens and configures nodes to join:
 
 ```yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: worker-pool-kubeadm
@@ -294,7 +294,7 @@ spec:
 For k3s clusters, provide the server URL and token:
 
 ```yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: worker-pool-k3s
@@ -353,7 +353,7 @@ stringData:
 For RKE2 or Rancher-managed clusters:
 
 ```yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: worker-pool-rke2
@@ -414,7 +414,7 @@ stringData:
 For Talos clusters (note: Talos uses machine configs, not cloud-init):
 
 ```yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: worker-pool-talos
@@ -460,7 +460,7 @@ spec:
 The operator can automatically create and manage **Hetzner Cloud Firewalls** for your node pools. Firewalls are visible in the Hetzner Cloud Console and attached to all servers in the pool.
 
 ```yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: web-workers
@@ -539,7 +539,7 @@ spec:
 The operator supports attaching servers to **Hetzner Cloud Private Networks** for secure internal communication between your resources.
 
 ```yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: private-workers

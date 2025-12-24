@@ -7,7 +7,7 @@ metadata:
     {{- include "scale.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - hcloud.autokube.io
+  - autokube.io
   resources:
   - nodepools
   verbs:
@@ -19,13 +19,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - hcloud.autokube.io
+  - autokube.io
   resources:
   - nodepools/finalizers
   verbs:
   - update
 - apiGroups:
-  - hcloud.autokube.io
+  - autokube.io
   resources:
   - nodepools/status
   verbs:

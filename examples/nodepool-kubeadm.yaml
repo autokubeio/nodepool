@@ -1,4 +1,4 @@
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: worker-pool-kubeadm

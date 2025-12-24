@@ -39,7 +39,7 @@ make generate
 make manifests
 
 # 3. Apply CRD to your cluster (for testing)
-kubectl apply -f config/crd/bases/hcloud.autokube.io_nodepools.yaml
+kubectl apply -f config/crd/bases/autokube.io_nodepools.yaml
 
 # 4. Test with example files
 kubectl apply -f examples/nodepool-kubeadm.yaml --dry-run=server
@@ -156,10 +156,10 @@ kubectl apply -f examples/nodepool-kubeadm.yaml --dry-run=client
 
 ```bash
 # View CRD schema
-kubectl get crd nodepools.hcloud.autokube.io -o yaml
+kubectl get crd nodepools.autokube.io -o yaml
 
 # Check specific field validation
-kubectl get crd nodepools.hcloud.autokube.io -o jsonpath='{.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.provider}'
+kubectl get crd nodepools.autokube.io -o jsonpath='{.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.provider}'
 ```
 
 ## Common Issues

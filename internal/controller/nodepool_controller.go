@@ -42,7 +42,7 @@ import (
 
 const (
 	reconcileInterval = 30 * time.Second
-	nodePoolFinalizer = "hcloud.autokube.io/finalizer"
+	nodePoolFinalizer = "autokube.io/finalizer"
 	defaultTokenKey   = "token"
 )
 
@@ -58,9 +58,9 @@ type NodePoolReconciler struct {
 	DeadLetterQueue    *reliability.DeadLetterQueue
 }
 
-// +kubebuilder:rbac:groups=hcloud.autokube.io,resources=nodepools,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=hcloud.autokube.io,resources=nodepools/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=hcloud.autokube.io,resources=nodepools/finalizers,verbs=update
+// +kubebuilder:rbac:groups=autokube.io,resources=nodepools,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=autokube.io,resources=nodepools/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=autokube.io,resources=nodepools/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;delete
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods/eviction,verbs=create

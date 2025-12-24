@@ -7,7 +7,7 @@ This document describes how to extend the NodePool operator to support additiona
 The NodePool CRD now uses a provider-based architecture:
 
 ```yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: example-pool
@@ -301,7 +301,7 @@ Add example YAML files for the new provider:
 
 ```yaml
 # examples/nodepool-aws.yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: worker-pool-aws

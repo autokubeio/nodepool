@@ -62,11 +62,11 @@ helm install nodepool ./charts/nodepool \
 kubectl get pods -n hcloud-system
 
 # Check if CRD is installed
-kubectl get crd nodepools.hcloud.autokube.io
+kubectl get crd nodepools.autokube.io
 
 # Expected output:
 # NAME                                  CREATED AT
-# nodepools.hcloud.autokube.io    2024-12-06T...
+# nodepools.autokube.io    2024-12-06T...
 ```
 
 ## Step 4: Create Your First Node Pool
@@ -83,7 +83,7 @@ If you want SSH access to your nodes:
 Create a file `my-nodepool.yaml`:
 
 ```yaml
-apiVersion: hcloud.autokube.io/v1alpha1
+apiVersion: autokube.io/v1alpha1
 kind: NodePool
 metadata:
   name: worker-nodes
@@ -235,7 +235,7 @@ kubectl delete nodepools --all -A
 helm uninstall nodepool -n hcloud-system
 
 # Remove CRD (optional)
-kubectl delete crd nodepools.hcloud.autokube.io
+kubectl delete crd nodepools.autokube.io
 
 # Remove namespace
 kubectl delete namespace hcloud-system

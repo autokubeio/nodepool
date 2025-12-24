@@ -77,7 +77,7 @@ install: ## Install CRDs into the K8s cluster.
 
 .PHONY: uninstall
 uninstall: ## Uninstall CRDs from the K8s cluster.
-	kubectl delete crd nodepools.hcloud.autokube.io
+	kubectl delete crd nodepools.autokube.io
 
 .PHONY: deploy
 deploy: ## Deploy controller to the K8s cluster.
@@ -111,7 +111,7 @@ release-manifests: manifests ## Generate combined installation manifest for GitH
 	@echo "# ============================================" >> dist/install.yaml
 	@echo "# Custom Resource Definitions (CRDs)" >> dist/install.yaml
 	@echo "# ============================================" >> dist/install.yaml
-	@cat config/crd/bases/hcloud.autokube.io_nodepools.yaml >> dist/install.yaml
+	@cat config/crd/bases/autokube.io_nodepools.yaml >> dist/install.yaml
 	@echo "" >> dist/install.yaml
 	@echo "---" >> dist/install.yaml
 	@echo "# ============================================" >> dist/install.yaml
