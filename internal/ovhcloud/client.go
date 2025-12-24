@@ -31,6 +31,8 @@ const (
 	DirectionIngress = "ingress"
 	// DirectionEgress represents outgoing traffic
 	DirectionEgress = "egress"
+	// StatusActive represents active status
+	StatusActive = "ACTIVE"
 )
 
 // ClientInterface defines the interface for interacting with OVHcloud
@@ -159,7 +161,7 @@ type InstanceConfig struct {
 }
 
 // ListInstances retrieves all instances for a specific node pool
-func (c *Client) ListInstances(ctx context.Context, nodePoolName, namespace string) ([]Instance, error) {
+func (c *Client) ListInstances(ctx context.Context, _, _ string) ([]Instance, error) {
 	if c.ovhClient == nil {
 		return nil, fmt.Errorf("OVHcloud client not initialized")
 	}
@@ -195,12 +197,13 @@ func (c *Client) ListInstances(ctx context.Context, nodePoolName, namespace stri
 
 			// Extract IP addresses
 			for _, ip := range raw.IPAddresses {
-				if ip.Version == 4 {
+				switch ip.Version {
+				case 4:
 					instance.IPv4 = ip.IP
 					if ip.Type == "private" {
 						instance.PrivateIP = ip.IP
 					}
-				} else if ip.Version == 6 {
+				case 6:
 					instance.IPv6 = ip.IP
 				}
 			}
@@ -334,12 +337,13 @@ func (c *Client) GetInstance(ctx context.Context, instanceID string) (*Instance,
 
 	// Extract IP addresses
 	for _, ip := range raw.IPAddresses {
-		if ip.Version == 4 {
+		switch ip.Version {
+		case 4:
 			instance.IPv4 = ip.IP
 			if ip.Type == "private" {
 				instance.PrivateIP = ip.IP
 			}
-		} else if ip.Version == 6 {
+		case 6:
 			instance.IPv6 = ip.IP
 		}
 	}
@@ -348,7 +352,7 @@ func (c *Client) GetInstance(ctx context.Context, instanceID string) (*Instance,
 }
 
 // GetOrCreateSecurityGroup gets an existing security group or creates a new one
-func (c *Client) GetOrCreateSecurityGroup(ctx context.Context, name string, rules []SecurityRule) (*SecurityGroup, error) {
+func (c *Client) GetOrCreateSecurityGroup(ctx context.Context, name string, _ []SecurityRule) (*SecurityGroup, error) {
 	if c.ovhClient == nil {
 		return nil, fmt.Errorf("OVHcloud client not initialized")
 	}
@@ -357,12 +361,8 @@ func (c *Client) GetOrCreateSecurityGroup(ctx context.Context, name string, rule
 	var groupIDs []string
 	endpoint := fmt.Sprintf("/cloud/project/%s/network/private", c.projectID)
 	if err := c.ovhClient.GetWithContext(ctx, endpoint, &groupIDs); err != nil {
-		// If listing fails, return placeholder
-		return &SecurityGroup{
-			ID:          "default",
-			Name:        name,
-			Description: "Default security group",
-		}, nil
+		// If listing fails, return error
+		return nil, fmt.Errorf("failed to list security groups: %w", err)
 	}
 
 	// For now, return a placeholder as OVHcloud security groups API is complex
@@ -375,7 +375,7 @@ func (c *Client) GetOrCreateSecurityGroup(ctx context.Context, name string, rule
 }
 
 // DeleteSecurityGroup deletes a security group
-func (c *Client) DeleteSecurityGroup(ctx context.Context, securityGroupID string) error {
+func (c *Client) DeleteSecurityGroup(_ context.Context, _ string) error {
 	if c.ovhClient == nil {
 		return fmt.Errorf("OVHcloud client not initialized")
 	}
@@ -386,7 +386,7 @@ func (c *Client) DeleteSecurityGroup(ctx context.Context, securityGroupID string
 }
 
 // ConvertToSecurityRules converts FirewallRule to OVHcloud SecurityRule format
-func ConvertToSecurityRules(firewallRules []interface{}) []SecurityRule {
+func ConvertToSecurityRules(_ []interface{}) []SecurityRule {
 	// TODO: Implement conversion logic
 	return nil
 }
@@ -501,10 +501,10 @@ func (c *Client) GetNetworkIDByName(ctx context.Context, region, networkName str
 
 	// Match by name and region
 	for _, network := range networks {
-		if network.Name == networkName && network.Status == "ACTIVE" {
+		if network.Name == networkName && network.Status == StatusActive {
 			// Check if network is available in the specified region
 			for _, netRegion := range network.Regions {
-				if netRegion.Region == region && netRegion.Status == "ACTIVE" {
+				if netRegion.Region == region && netRegion.Status == StatusActive {
 					return network.ID, nil
 				}
 			}
@@ -542,10 +542,10 @@ func (c *Client) GetPublicNetworkID(ctx context.Context, region string) (string,
 
 	// Find the public network for the specified region
 	for _, network := range networks {
-		if network.Status == "ACTIVE" {
+		if network.Status == StatusActive {
 			// Check if network is available in the specified region
 			for _, netRegion := range network.Regions {
-				if netRegion.Region == region && netRegion.Status == "ACTIVE" {
+				if netRegion.Region == region && netRegion.Status == StatusActive {
 					return network.ID, nil
 				}
 			}

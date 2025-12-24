@@ -776,7 +776,7 @@ func (r *NodePoolReconciler) scaleDownOVHcloud(ctx context.Context, nodePool *hc
 	return nil
 }
 
-func (r *NodePoolReconciler) deleteOVHInstance(ctx context.Context, nodePool *hcloudv1alpha1.NodePool, instance ovhcloud.Instance) error {
+func (r *NodePoolReconciler) deleteOVHInstance(ctx context.Context, _ *hcloudv1alpha1.NodePool, instance ovhcloud.Instance) error {
 	logger := log.FromContext(ctx)
 
 	// Drain node before deletion
@@ -811,7 +811,10 @@ func (r *NodePoolReconciler) getOrCreateOVHSecurityGroup(ctx context.Context, no
 	for _, rule := range nodePool.Spec.FirewallRules {
 		// Parse port (assuming single port for now, not ranges)
 		var port int
-		fmt.Sscanf(rule.Port, "%d", &port)
+		if _, err := fmt.Sscanf(rule.Port, "%d", &port); err != nil {
+			// If port parsing fails, skip this rule
+			continue
+		}
 
 		rules = append(rules, ovhcloud.SecurityRule{
 			Direction:  ovhcloud.DirectionIngress,
