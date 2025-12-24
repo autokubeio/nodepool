@@ -343,14 +343,18 @@ Update the main README.md to document the new provider:
 ```markdown
 ## Supported Cloud Providers
 
-- **Hetzner Cloud** - Production ready
-- **AWS** - Beta
-- **GCP** - Coming soon
-- **Azure** - Coming soon
+- ✅ **Hetzner Cloud** - Production ready
+- 🔜 **OVHcloud** - Planned Q1 2026
+- 🔜 **UpCloud** - Planned Q1 2026
+- 🔜 **DigitalOcean** - Planned Q1 2026
+- 🔜 **Scaleway** - Planned Q2 2026
+- 🔜 **Linode/Akamai** - Planned Q2 2026
+- 🔜 **Vultr** - Planned Q3 2026
+- 🔜 **Contabo** - Planned Q3 2026
 
-### AWS Configuration
+### DigitalOcean Configuration
 
-See [examples/nodepool-aws.yaml](examples/nodepool-aws.yaml) for a complete example.
+See [examples/nodepool-digitalocean.yaml](examples/nodepool-digitalocean.yaml) for a complete example.
 ```
 
 ## Provider-Specific Considerations
@@ -359,10 +363,17 @@ See [examples/nodepool-aws.yaml](examples/nodepool-aws.yaml) for a complete exam
 
 Each provider needs its own authentication mechanism:
 
-- **Hetzner**: API token from environment variable `HCLOUD_TOKEN`
-- **AWS**: AWS credentials from environment variables or IAM role
-- **GCP**: Service account JSON key
-- **Azure**: Service principal credentials
+- **Hetzner Cloud**: API token from environment variable `HCLOUD_TOKEN`
+- **OVHcloud**: Application key, secret, and consumer key from environment variables
+- **UpCloud**: Username and password or API token from environment variables
+- **DigitalOcean**: API token from environment variable `DO_TOKEN`
+- **Scaleway**: Access key and secret key from environment variables
+- **Linode**: API token from environment variable `LINODE_TOKEN`
+- **Vultr**: API key from environment variable `VULTR_API_KEY`
+- **Contabo**: API credentials from environment variables
+- **AWS** (future): AWS credentials from environment variables or IAM role
+- **Azure** (future): Service principal credentials
+- **GCP** (future): Service account JSON key
 
 Update the manager deployment to include necessary credentials:
 
@@ -374,16 +385,21 @@ env:
       secretKeyRef:
         name: hcloud-secret
         key: token
-  - name: AWS_ACCESS_KEY_ID
+  - name: DO_TOKEN
     valueFrom:
       secretKeyRef:
-        name: aws-credentials
-        key: access-key-id
-  - name: AWS_SECRET_ACCESS_KEY
+        name: digitalocean-credentials
+        key: token
+  - name: LINODE_TOKEN
     valueFrom:
       secretKeyRef:
-        name: aws-credentials
-        key: secret-access-key
+        name: linode-credentials
+        key: token
+  - name: VULTR_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: vultr-credentials
+        key: api-key
 ```
 
 ### Cloud-Specific Features

@@ -1,0 +1,23 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+runcmd:
+  # Install RKE2 agent
+  - curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE="agent" sh -
+  
+  # Configure RKE2
+  - mkdir -p /etc/rancher/rke2/
+  - |
+    cat > /etc/rancher/rke2/config.yaml <<EOF
+    server: {{.ServerURL}}
+    token: {{.Token}}
+    {{range $k, $v := .Labels}}
+    node-label:
+      - "{{$k}}={{$v}}"
+    {{end}}
+    EOF
+  
+  # Start RKE2 agent
+  - systemctl enable rke2-agent.service
+  - systemctl start rke2-agent.service

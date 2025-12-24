@@ -1,0 +1,7 @@
+# Talos Machine Config
+# Apply this with: talosctl apply-config --insecure --nodes <node-ip> --file <this-file>
+machine:
+  type: worker
+  token: {{.MachineConfig}}
+  controlPlane:
+    endpoint: {{.ControlPlaneEndpoint}}

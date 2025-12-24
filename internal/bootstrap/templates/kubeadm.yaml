@@ -1,0 +1,110 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - ufw
+
+runcmd:
+  # Configure firewall for Kubernetes
+  # - ufw --force enable
+  # - ufw default deny incoming
+  # - ufw default allow outgoing
+  # - ufw allow ssh
+  # - ufw allow 10250/tcp  # Kubelet API
+  # - ufw allow 30000:32767/tcp  # NodePort Services
+  # - ufw allow 8472/udp  # Flannel VXLAN
+  # - ufw allow 4789/udp  # Flannel/Calico VXLAN
+  # - ufw allow 179/tcp  # Calico BGP
+  # - ufw allow 5473/tcp  # Calico Typha{{range .CustomFirewallRules}}
+  # - ufw allow {{.}}{{end}}
+  # - ufw reload
+
+  # Setup kernel modules
+  - modprobe br_netfilter
+  - modprobe overlay
+  - modprobe ip_vs
+  - modprobe ip_vs_rr
+  - modprobe ip_vs_wrr
+  - modprobe ip_vs_sh
+  - modprobe nf_conntrack
+  - |
+    cat <<EOF > /etc/modules-load.d/k8s.conf
+    br_netfilter
+    overlay
+    ip_vs
+    ip_vs_rr
+    ip_vs_wrr
+    ip_vs_sh
+    nf_conntrack
+    EOF
+  
+  # Setup sysctl params
+  - |
+    cat <<EOF > /etc/sysctl.d/k8s.conf
+    net.bridge.bridge-nf-call-iptables = 1
+    net.bridge.bridge-nf-call-ip6tables = 1
+    net.ipv4.ip_forward = 1
+    net.ipv4.conf.all.forwarding = 1
+    net.ipv6.conf.all.forwarding = 1
+    net.netfilter.nf_conntrack_max = 1000000
+    fs.inotify.max_user_instances = 8192
+    fs.inotify.max_user_watches = 524288
+    vm.max_map_count = 262144
+    EOF
+  - sysctl --system
+  
+  # Disable swap
+  - swapoff -a
+  - sed -i '/ swap / s/^/#/' /etc/fstab
+  
+  # Install containerd
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg  #nolint:lll
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null  #nolint:lll
+  - apt-get update
+  - apt-get install -y containerd.io
+  - mkdir -p /etc/containerd
+  - containerd config default | tee /etc/containerd/config.toml
+  - sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+  - systemctl restart containerd
+  - systemctl enable containerd
+  
+  # Install kubeadm, kubelet, kubectl (version {{.K8sVersion}})
+  - curl -fsSL https://pkgs.k8s.io/core:/stable:/v{{.K8sVersion}}/deb/Release.key | gpg --dearmor -o /usr/share/keyrings/kubernetes-archive-keyring.gpg  #nolint:lll
+  - echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{{.K8sVersion}}/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list  #nolint:lll
+  - apt-get update
+  - apt-get install -y kubelet kubeadm kubectl
+  - apt-mark hold kubelet kubeadm kubectl
+  
+  # Configure kubelet
+  - |
+    cat <<EOF > /etc/default/kubelet
+    KUBELET_EXTRA_ARGS=--node-ip=$(hostname -I | awk '{print $1}')
+    EOF
+  - systemctl daemon-reload
+  - systemctl enable kubelet
+  
+  # Join cluster with token
+  - |
+    kubeadm join {{.APIServerEndpoint}} \
+      --token {{.Token}} \
+      --discovery-token-ca-cert-hash {{.CACertHash}} \
+      --v=5
+{{range .RunCmd}}
+  # User command
+  - {{.}}{{end}}
+
+write_files:
+  - path: /etc/crictl.yaml
+    content: |
+      runtime-endpoint: unix:///run/containerd/containerd.sock
+      image-endpoint: unix:///run/containerd/containerd.sock
+      timeout: 10
+
+power_state:
+  mode: reboot
+  condition: True
