@@ -155,7 +155,7 @@ spec:
   # Hetzner Cloud configuration
   hetznerConfig:
     serverType: cx11     # Server type (cx11, cpx21, ccx13, etc.)
-    location: nbg1       # Location (nbg1, fsn1, hel1, etc.)
+    location: nbg1       # Location (nbg1=Nuremberg, fsn1=Falkenstein, hel1=Helsinki, ash=Ashburn, hil=Hillsboro, sin=Singapore)
     image: ubuntu-22.04  # OS image
   
   minNodes: 2            # Minimum nodes
@@ -190,7 +190,7 @@ spec:
   # Hetzner Cloud configuration
   hetznerConfig:
     serverType: cx11     # Server type (cx11, cpx21, ccx13, etc.)
-    location: nbg1       # Location (nbg1, fsn1, hel1, etc.)
+    location: nbg1       # Location (nbg1=Nuremberg, fsn1=Falkenstein, hel1=Helsinki, ash=Ashburn, hil=Hillsboro, sin=Singapore)
     image: ubuntu-22.04  # OS image
 
   minNodes: 2            # Minimum nodes
@@ -640,7 +640,7 @@ worker-pool   cx11         nbg1       2     10    3         3       5m
 | `provider` | string | Yes | hetzner | Cloud provider (currently: hetzner) |
 | `hetznerConfig` | object | Yes* | - | Hetzner Cloud configuration (*required when provider is hetzner) |
 | `hetznerConfig.serverType` | string | Yes | - | Hetzner server type (cx11, cpx21, ccx13, etc.) |
-| `hetznerConfig.location` | string | Yes | - | Hetzner location (nbg1, fsn1, hel1, ash, etc.) |
+| `hetznerConfig.location` | string | Yes | - | Hetzner location (nbg1=Nuremberg, fsn1=Falkenstein, hel1=Helsinki, ash=Ashburn, hil=Hillsboro, sin=Singapore) |
 | `hetznerConfig.image` | string | Yes | - | OS image (ubuntu-22.04, debian-11, etc.) |
 | `hetznerConfig.network` | string | No | - | Hetzner private network name or ID |
 | `minNodes` | int | No | 1 | Minimum number of nodes |
@@ -888,81 +888,149 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## Roadmap
 
+### v0.1.0 (December 2025) ✅ Completed
+- [x] **Hetzner Cloud provider support**
+  - Full server lifecycle management
+  - Multiple server types (shared, dedicated, ARM)
+  - All datacenter locations (Nuremberg, Falkenstein, Helsinki, Ashburn, Hillsboro, Singapore)
+  - Private networking support
+  - Automatic firewall management
+  - SSH key integration
+- [x] **Multi-distribution Kubernetes support**
+  - Kubeadm with automatic token generation
+  - K3s agent configuration
+  - RKE2/Rancher support
+  - Talos machine config generation
+  - Cloud-init templates via embed.FS
+- [x] **Core autoscaling features**
+  - Pod-based scaling (pending pods detection)
+  - CPU utilization-based scale down
+  - Graceful node drain before deletion
+  - Min/max/target node configuration
+- [x] **Observability**
+  - Prometheus metrics integration
+  - Structured logging
+  - Health checks and readiness probes
+- [x] **Security features**
+  - Bootstrap token encryption
+  - Secrets manager integration
+  - RBAC configuration
+  - Network policy support
+
 ### v0.2.0 (Q1 2026)
 - [ ] **OVHcloud Public Cloud provider support**
-  - European data sovereignty and GDPR compliance
-  - Competitive pricing for EU customers
-  - Multiple instance types and flavors
+  - Full instance lifecycle management
+  - Multiple flavors (s1, b2, c2, r2, t1)
+  - Global datacenter regions (Europe, Americas, Asia-Pacific)
   - Private networking (vRack)
-  - Anti-DDoS protection included
+  - Security group management
+  - Anti-DDoS protection
+  - Object storage integration
 - [ ] **UpCloud provider support**
-  - High-performance MaxIOPS storage
-  - Simple and predictable pricing
-  - European and US datacenters
+  - Full server lifecycle management
+  - Multiple server plans (1-20 CPU cores)
+  - Global datacenter zones (Europe, Americas, Asia-Pacific)
   - Private networking (SDN)
-  - Fast server provisioning (45 seconds)
-- [ ] **DigitalOcean Droplets provider support**
-  - Simple API and predictable pricing
-  - Flexible Droplet sizes
+  - Firewall management
+  - High-performance MaxIOPS storage
+- [ ] **DigitalOcean provider support**
+  - Full Droplet lifecycle management
+  - Multiple Droplet types (Basic, Premium, Optimized)
+  - Global datacenter regions
   - VPC network support
+  - Firewall management
   - Load balancer integration
-  - Popular among startups and SMBs
 - [ ] Node health checks and auto-replacement
-- [ ] Enhanced logging with structured output
+- [ ] Enhanced metrics and dashboards
+- [ ] Webhook notifications for scaling events
 
 ### v0.3.0 (Q2 2026)
 - [ ] **Scaleway provider support**
-  - ARM-based instances (cost-effective)
-  - GPU instances for AI/ML workloads
-  - European focus (France, Netherlands, Poland)
-  - Elastic Metal (bare metal) support
-  - Private networks and managed Kubernetes
-- [ ] **Linode/Akamai Cloud Compute provider support**
-  - Competitive pricing globally
+  - Full instance lifecycle management
+  - Multiple instance types (DEV1, GP1, RENDER, ENT1)
+  - ARM-based instances (Ampere Altra)
+  - GPU instances (H100, L4, L40S)
+  - European datacenter zones (France, Netherlands, Poland)
+  - Private networking (VPC)
+  - Security group management
+  - Elastic Metal (bare metal)
+- [ ] **Linode/Akamai provider support**
+  - Full Linode lifecycle management
+  - Multiple instance types (Shared, Dedicated, High Memory, GPU)
+  - Global datacenter regions
+  - VLAN private networking
+  - Firewall management
   - NodeBalancer integration
-  - VLAN support for private networking
-  - Global datacenter presence
-- [ ] Load balancer integration across providers
+  - Block storage volumes
+- [ ] Cost optimization mode (cheaper instance selection)
 - [ ] Node pool templates and presets
-- [ ] Cost optimization mode (prefer cheaper instance types)
+- [ ] Multi-cloud cost comparison dashboard
 
 ### v0.4.0 (Q3 2026)
-- [ ] **Vultr Compute provider support**
-  - High-performance instances
-  - Bare Metal support
-  - Global locations (25+ datacenters)
-  - Reserved instances for cost savings
+- [ ] **Vultr provider support**
+  - Full instance lifecycle management
+  - Multiple instance plans (VC2, VHF, VHP, Bare Metal)
+  - 25+ global datacenter locations
+  - Private networking (VPC)
+  - Firewall management
+  - Reserved instances
+  - Block storage and snapshots
 - [ ] **Contabo provider support**
-  - Extremely competitive pricing
-  - High storage capacity options
-  - European and US locations
+  - Full VPS/Dedicated server lifecycle
+  - Multiple server types (Cloud VPS, VPS, Dedicated)
+  - High storage capacity (up to 1.6TB NVMe)
+  - European and global datacenters
+  - Private networking
+  - Object storage (S3-compatible)
 - [ ] Backup and disaster recovery features
-- [ ] Multi-zone/multi-region node distribution
-- [ ] Advanced auto-scaling strategies (CPU, memory, custom metrics)
+- [ ] Multi-zone/multi-region distribution
+- [ ] Advanced autoscaling (CPU, memory, custom metrics)
+- [ ] HPA and VPA integration
 
 ### v0.5.0 (Q4 2026)
 - [ ] **AWS EC2 provider support**
-  - EC2 Auto Scaling Groups integration
-  - Spot Instance support for cost optimization
-  - Multiple instance types and families
+  - Full EC2 instance lifecycle management
+  - Multiple instance families (t3, m5, c5, r5, p4, g5)
+  - All AWS global regions
+  - Auto Scaling Groups integration
+  - Spot Instances (up to 90% savings)
+  - Reserved and Savings Plans
   - EBS volume management
-  - Integration with AWS VPC
-- [ ] **Azure Virtual Machines provider support**
+  - VPC and Security Groups
+  - IAM role attachment
+  - Placement groups
+- [ ] **Azure VM provider support**
+  - Full VM lifecycle management
+  - Multiple VM series (B, D, E, F, M, N)
+  - All Azure global regions
   - VM Scale Sets integration
-  - Spot VMs for cost optimization
+  - Spot VMs (up to 90% savings)
+  - Reserved instances
   - Managed disk support
-  - Azure Virtual Network integration
-- [ ] Spot/Preemptible instance support across all providers
-- [ ] Cross-cloud cost comparison and recommendations
+  - Virtual Network and NSG
+  - Availability Zones
+- [ ] Spot/Preemptible instance support (all providers)
+- [ ] Cross-cloud cost comparison
+- [ ] Budget alerts and spend tracking
+- [ ] Cost allocation tags
 
 ### v0.6.0 (Q1 2027)
 - [ ] **GCP Compute Engine provider support**
-  - Instance groups and templates
-  - Preemptible VMs for cost savings
+  - Full Compute Engine lifecycle management
+  - Multiple machine families (e2, n2, c2, m2, a2, g2)
   - Custom machine types
-  - GPU support for AI/ML workloads
-- [ ] Node pool scheduling policies
+  - All GCP global regions
+  - Managed Instance Groups (MIG)
+  - Preemptible and Spot VMs (up to 80% discount)
+  - Committed use discounts
+  - GPU support (A100, H100, L4, T4, V100)
+  - VPC and firewall management
+  - Persistent disk management
+  - Load Balancing integration
+- [ ] Node pool scheduling policies (topology, affinity)
 - [ ] Advanced placement strategies
+- [ ] Cluster Autoscaler integration
+- [ ] Multi-cloud orchestration and failover
 
 ### Long-term Vision
 - [ ] Web UI dashboard for management and monitoring
