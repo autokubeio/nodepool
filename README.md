@@ -28,7 +28,7 @@ A Kubernetes operator for autoscaling cloud nodes based on cluster load. This op
 ## Supported Cloud Providers
 
 - ✅ **Hetzner Cloud** - Production ready
-- � **OVHcloud** - In development (basic support available)
+- ✅ **OVHcloud** - In development (basic support available)
 - 🔜 **UpCloud** - Planned Q1 2026
 - 🔜 **DigitalOcean** - Planned Q1 2026
 - 🔜 **Scaleway** - Planned Q2 2026
@@ -923,14 +923,12 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
   - Network policy support
 
 ### v0.2.0 (Q1 2026)
-- [ ] **OVHcloud Public Cloud provider support**
+- [x] **OVHcloud Public Cloud provider support**
   - Full instance lifecycle management
   - Multiple flavors (s1, b2, c2, r2, t1)
   - Global datacenter regions (Europe, Americas, Asia-Pacific)
   - Private networking (vRack)
   - Security group management
-  - Anti-DDoS protection
-  - Object storage integration
 - [ ] **UpCloud provider support**
   - Full server lifecycle management
   - Multiple server plans (1-20 CPU cores)
