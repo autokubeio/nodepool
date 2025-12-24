@@ -37,6 +37,7 @@ import (
 	"github.com/autokubeio/autokube/internal/bootstrap"
 	"github.com/autokubeio/autokube/internal/hetzner"
 	"github.com/autokubeio/autokube/internal/metrics"
+	"github.com/autokubeio/autokube/internal/ovhcloud"
 	"github.com/autokubeio/autokube/internal/reliability"
 )
 
@@ -51,6 +52,7 @@ type NodePoolReconciler struct {
 	client.Client
 	Scheme             *runtime.Scheme
 	HCloudClient       hetzner.ClientInterface
+	OVHCloudClient     ovhcloud.ClientInterface
 	MetricsClient      *metrics.Collector
 	KubeClient         kubernetes.Interface
 	BootstrapManager   *bootstrap.BootstrapTokenManager
@@ -97,18 +99,51 @@ func (r *NodePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	// Get current state from Hetzner Cloud
-	servers, err := r.HCloudClient.ListServers(ctx, nodePool.Name, nodePool.Namespace)
-	if err != nil {
-		logger.Error(err, "Failed to list servers from Hetzner Cloud")
+	// Get current state from cloud provider
+	var currentNodes int
+	var serverNames []string
+	var readyNodes int
+
+	switch nodePool.Spec.Provider {
+	case hcloudv1alpha1.CloudProviderHetzner:
+		servers, err := r.HCloudClient.ListServers(ctx, nodePool.Name, nodePool.Namespace)
+		if err != nil {
+			logger.Error(err, "Failed to list servers from Hetzner Cloud")
+			r.updateStatus(ctx, nodePool, "Error", err.Error())
+			return ctrl.Result{RequeueAfter: reconcileInterval}, err
+		}
+		currentNodes = len(servers)
+		readyNodes = r.countReadyNodes(servers)
+		serverNames = r.getServerNames(servers)
+
+	case hcloudv1alpha1.CloudProviderOVHcloud:
+		if r.OVHCloudClient == nil {
+			err := fmt.Errorf("OVHcloud client not initialized")
+			logger.Error(err, "OVHcloud provider selected but client is nil")
+			r.updateStatus(ctx, nodePool, "Error", err.Error())
+			return ctrl.Result{RequeueAfter: reconcileInterval}, err
+		}
+		instances, err := r.OVHCloudClient.ListInstances(ctx, nodePool.Name, nodePool.Namespace)
+		if err != nil {
+			logger.Error(err, "Failed to list instances from OVHcloud")
+			r.updateStatus(ctx, nodePool, "Error", err.Error())
+			return ctrl.Result{RequeueAfter: reconcileInterval}, err
+		}
+		currentNodes = len(instances)
+		readyNodes = r.countReadyOVHInstances(instances)
+		serverNames = r.getOVHInstanceNames(instances)
+
+	default:
+		err := fmt.Errorf("unsupported provider: %s", nodePool.Spec.Provider)
+		logger.Error(err, "Invalid cloud provider")
 		r.updateStatus(ctx, nodePool, "Error", err.Error())
 		return ctrl.Result{RequeueAfter: reconcileInterval}, err
 	}
 
 	// Update status
-	nodePool.Status.CurrentNodes = len(servers)
-	nodePool.Status.ReadyNodes = r.countReadyNodes(servers)
-	nodePool.Status.Nodes = r.getServerNames(servers)
+	nodePool.Status.CurrentNodes = currentNodes
+	nodePool.Status.ReadyNodes = readyNodes
+	nodePool.Status.Nodes = serverNames
 
 	// Determine desired number of nodes
 	desiredNodes := nodePool.Spec.MinNodes // Default to min nodes
@@ -130,9 +165,9 @@ func (r *NodePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Scale up if needed
-	if len(servers) < desiredNodes {
-		nodesToAdd := desiredNodes - len(servers)
-		logger.Info("Scaling up", "current", len(servers), "desired", desiredNodes, "adding", nodesToAdd)
+	if currentNodes < desiredNodes {
+		nodesToAdd := desiredNodes - currentNodes
+		logger.Info("Scaling up", "current", currentNodes, "desired", desiredNodes, "adding", nodesToAdd)
 
 		for i := 0; i < nodesToAdd; i++ {
 			if err := r.createServer(ctx, nodePool); err != nil {
@@ -148,18 +183,15 @@ func (r *NodePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Scale down if needed
-	if len(servers) > desiredNodes {
-		nodesToRemove := len(servers) - desiredNodes
-		logger.Info("Scaling down", "current", len(servers), "desired", desiredNodes, "removing", nodesToRemove)
+	if currentNodes > desiredNodes {
+		nodesToRemove := currentNodes - desiredNodes
+		logger.Info("Scaling down", "current", currentNodes, "desired", desiredNodes, "removing", nodesToRemove)
 
-		for i := 0; i < nodesToRemove; i++ {
-			if i < len(servers) {
-				if err := r.deleteServer(ctx, nodePool, servers[i]); err != nil {
-					logger.Error(err, "Failed to delete server")
-					r.updateStatus(ctx, nodePool, "ScaleDownFailed", err.Error())
-					return ctrl.Result{RequeueAfter: reconcileInterval}, err
-				}
-			}
+		// Scale down logic is provider-specific
+		if err := r.scaleDown(ctx, nodePool, nodesToRemove); err != nil {
+			logger.Error(err, "Failed to scale down")
+			r.updateStatus(ctx, nodePool, "ScaleDownFailed", err.Error())
+			return ctrl.Result{RequeueAfter: reconcileInterval}, err
 		}
 
 		now := metav1.Now()
@@ -246,7 +278,7 @@ func (r *NodePoolReconciler) createServer(ctx context.Context, nodePool *hcloudv
 
 	// Get or create firewall if firewall rules are specified
 	var firewallIDs []int64
-	if len(nodePool.Spec.FirewallRules) > 0 {
+	if len(nodePool.Spec.FirewallRules) > 0 && nodePool.Spec.Provider == hcloudv1alpha1.CloudProviderHetzner {
 		firewallID, err := r.getOrCreateFirewall(ctx, nodePool)
 		if err != nil {
 			return fmt.Errorf("failed to get or create firewall: %w", err)
@@ -254,6 +286,20 @@ func (r *NodePoolReconciler) createServer(ctx context.Context, nodePool *hcloudv
 		firewallIDs = []int64{firewallID}
 		logger.Info("Using firewall for server", "server", serverName, "firewallID", firewallID)
 	}
+
+	// Provider-specific server creation
+	switch nodePool.Spec.Provider {
+	case hcloudv1alpha1.CloudProviderHetzner:
+		return r.createHetznerServer(ctx, nodePool, serverName, labels, userData, firewallIDs)
+	case hcloudv1alpha1.CloudProviderOVHcloud:
+		return r.createOVHcloudInstance(ctx, nodePool, serverName, labels, userData)
+	default:
+		return fmt.Errorf("unsupported provider: %s", nodePool.Spec.Provider)
+	}
+}
+
+func (r *NodePoolReconciler) createHetznerServer(ctx context.Context, nodePool *hcloudv1alpha1.NodePool, serverName string, labels map[string]string, userData string, firewallIDs []int64) error {
+	logger := log.FromContext(ctx)
 
 	// Get Hetzner configuration
 	if nodePool.Spec.HetznerConfig == nil {
@@ -277,6 +323,94 @@ func (r *NodePoolReconciler) createServer(ctx context.Context, nodePool *hcloudv
 	}
 
 	logger.Info("Server created successfully", "server", server.Name, "id", server.ID)
+	return nil
+}
+
+func (r *NodePoolReconciler) createOVHcloudInstance(ctx context.Context, nodePool *hcloudv1alpha1.NodePool, instanceName string, labels map[string]string, userData string) error {
+	logger := log.FromContext(ctx)
+
+	// Get OVHcloud configuration
+	if nodePool.Spec.OVHcloudConfig == nil {
+		return fmt.Errorf("ovhcloudConfig is required when provider is ovhcloud")
+	}
+
+	config := nodePool.Spec.OVHcloudConfig
+
+	// Resolve FlavorID from FlavorName if needed
+	flavorID := config.FlavorID
+	if flavorID == "" && config.FlavorName != "" {
+		resolvedID, err := r.OVHCloudClient.GetFlavorIDByName(ctx, config.Region, config.FlavorName)
+		if err != nil {
+			return fmt.Errorf("failed to resolve flavor name '%s': %w", config.FlavorName, err)
+		}
+		flavorID = resolvedID
+		logger.Info("Resolved flavor name to ID", "flavorName", config.FlavorName, "flavorID", flavorID)
+	}
+	if flavorID == "" {
+		return fmt.Errorf("either flavorName or flavorID must be specified")
+	}
+
+	// Resolve ImageID from ImageName if needed
+	imageID := config.ImageID
+	if imageID == "" && config.ImageName != "" {
+		resolvedID, err := r.OVHCloudClient.GetImageIDByName(ctx, config.Region, config.ImageName)
+		if err != nil {
+			return fmt.Errorf("failed to resolve image name '%s': %w", config.ImageName, err)
+		}
+		imageID = resolvedID
+		logger.Info("Resolved image name to ID", "imageName", config.ImageName, "imageID", imageID)
+	}
+	if imageID == "" {
+		return fmt.Errorf("either imageName or imageID must be specified")
+	}
+
+	// Get or create security group if firewall rules are specified
+	var securityGroupID string
+	if len(nodePool.Spec.FirewallRules) > 0 {
+		securityGroup, err := r.getOrCreateOVHSecurityGroup(ctx, nodePool)
+		if err != nil {
+			return fmt.Errorf("failed to get or create security group: %w", err)
+		}
+		securityGroupID = securityGroup.ID
+		logger.Info("Using security group for instance", "instance", instanceName, "securityGroupID", securityGroupID)
+	}
+
+	// Resolve SSH key names to IDs
+	var sshKeyIDs []string
+	for _, sshKeyName := range nodePool.Spec.SSHKeys {
+		if sshKeyName == "" {
+			continue
+		}
+		keyID, err := r.OVHCloudClient.GetSSHKeyIDByName(ctx, sshKeyName)
+		if err != nil {
+			return fmt.Errorf("failed to resolve SSH key name '%s': %w", sshKeyName, err)
+		}
+		sshKeyIDs = append(sshKeyIDs, keyID)
+		logger.Info("Resolved SSH key name to ID", "sshKeyName", sshKeyName, "sshKeyID", keyID)
+	}
+
+	// Create a longer context for instance creation (OVHcloud can take 30-60s)
+	createCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	instance, err := r.OVHCloudClient.CreateInstance(createCtx, ovhcloud.InstanceConfig{
+		Name:            instanceName,
+		FlavorID:        flavorID,
+		ImageID:         imageID,
+		Region:          config.Region,
+		ProjectID:       config.ProjectID,
+		NetworkID:       config.NetworkID,
+		SSHKeys:         sshKeyIDs,
+		Labels:          labels,
+		UserData:        userData,
+		SecurityGroupID: securityGroupID,
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to create instance: %w", err)
+	}
+
+	logger.Info("Instance created successfully", "instance", instance.Name, "id", instance.ID)
 	return nil
 }
 
@@ -536,18 +670,46 @@ func (r *NodePoolReconciler) handleDeletion(
 	logger := log.FromContext(ctx)
 
 	if containsString(nodePool.Finalizers, nodePoolFinalizer) {
-		// Delete all servers
-		servers, err := r.HCloudClient.ListServers(ctx, nodePool.Name, nodePool.Namespace)
-		if err != nil {
-			logger.Error(err, "Failed to list servers during deletion")
-			return ctrl.Result{}, err
-		}
-
-		for _, server := range servers {
-			if err := r.deleteServer(ctx, nodePool, server); err != nil {
-				logger.Error(err, "Failed to delete server during cleanup", "server", server.Name)
+		switch nodePool.Spec.Provider {
+		case hcloudv1alpha1.CloudProviderHetzner:
+			// Delete all Hetzner servers
+			servers, err := r.HCloudClient.ListServers(ctx, nodePool.Name, nodePool.Namespace)
+			if err != nil {
+				logger.Error(err, "Failed to list servers during deletion")
 				return ctrl.Result{}, err
 			}
+
+			for _, server := range servers {
+				if err := r.deleteServer(ctx, nodePool, server); err != nil {
+					logger.Error(err, "Failed to delete server during cleanup", "server", server.Name)
+					return ctrl.Result{}, err
+				}
+			}
+
+		case hcloudv1alpha1.CloudProviderOVHcloud:
+			if r.OVHCloudClient == nil {
+				logger.Error(nil, "OVHcloud client not initialized")
+				return ctrl.Result{}, fmt.Errorf("OVHcloud client not initialized")
+			}
+
+			// Delete all OVHcloud instances
+			instances, err := r.OVHCloudClient.ListInstances(ctx, nodePool.Name, nodePool.Namespace)
+			if err != nil {
+				logger.Error(err, "Failed to list instances during deletion")
+				return ctrl.Result{}, err
+			}
+
+			logger.Info("Deleting OVHcloud instances", "count", len(instances), "nodePool", nodePool.Name)
+			for _, instance := range instances {
+				if err := r.deleteOVHInstance(ctx, nodePool, instance); err != nil {
+					logger.Error(err, "Failed to delete instance during cleanup", "instance", instance.Name, "id", instance.ID)
+					return ctrl.Result{}, err
+				}
+			}
+
+		default:
+			logger.Error(nil, "Unsupported provider during deletion", "provider", nodePool.Spec.Provider)
+			return ctrl.Result{}, fmt.Errorf("unsupported provider: %s", nodePool.Spec.Provider)
 		}
 
 		// Remove finalizer
@@ -558,6 +720,116 @@ func (r *NodePoolReconciler) handleDeletion(
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *NodePoolReconciler) scaleDown(ctx context.Context, nodePool *hcloudv1alpha1.NodePool, nodesToRemove int) error {
+	switch nodePool.Spec.Provider {
+	case hcloudv1alpha1.CloudProviderHetzner:
+		return r.scaleDownHetzner(ctx, nodePool, nodesToRemove)
+	case hcloudv1alpha1.CloudProviderOVHcloud:
+		return r.scaleDownOVHcloud(ctx, nodePool, nodesToRemove)
+	default:
+		return fmt.Errorf("unsupported provider: %s", nodePool.Spec.Provider)
+	}
+}
+
+func (r *NodePoolReconciler) scaleDownHetzner(ctx context.Context, nodePool *hcloudv1alpha1.NodePool, nodesToRemove int) error {
+	logger := log.FromContext(ctx)
+	servers, err := r.HCloudClient.ListServers(ctx, nodePool.Name, nodePool.Namespace)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < nodesToRemove && i < len(servers); i++ {
+		if err := r.deleteServer(ctx, nodePool, servers[i]); err != nil {
+			logger.Error(err, "Failed to delete server")
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *NodePoolReconciler) scaleDownOVHcloud(ctx context.Context, nodePool *hcloudv1alpha1.NodePool, nodesToRemove int) error {
+	logger := log.FromContext(ctx)
+	instances, err := r.OVHCloudClient.ListInstances(ctx, nodePool.Name, nodePool.Namespace)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < nodesToRemove && i < len(instances); i++ {
+		if err := r.deleteOVHInstance(ctx, nodePool, instances[i]); err != nil {
+			logger.Error(err, "Failed to delete instance")
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *NodePoolReconciler) deleteOVHInstance(ctx context.Context, nodePool *hcloudv1alpha1.NodePool, instance ovhcloud.Instance) error {
+	logger := log.FromContext(ctx)
+
+	// Drain node before deletion
+	if err := r.drainNode(ctx, instance.Name); err != nil {
+		logger.Error(err, "Failed to drain node, proceeding with deletion anyway", "node", instance.Name)
+	}
+
+	// Delete node from cluster
+	node := &corev1.Node{}
+	if err := r.Get(ctx, client.ObjectKey{Name: instance.Name}, node); err == nil {
+		if err := r.Delete(ctx, node); err != nil && !errors.IsNotFound(err) {
+			logger.Error(err, "Failed to delete node from cluster", "node", instance.Name)
+		} else {
+			logger.Info("Node deleted from cluster", "node", instance.Name)
+		}
+	}
+
+	// Delete the instance
+	if err := r.OVHCloudClient.DeleteInstance(ctx, instance.ID); err != nil {
+		return fmt.Errorf("failed to delete instance %s: %w", instance.ID, err)
+	}
+
+	logger.Info("Instance deleted successfully", "instance", instance.Name, "id", instance.ID)
+	return nil
+}
+
+func (r *NodePoolReconciler) getOrCreateOVHSecurityGroup(ctx context.Context, nodePool *hcloudv1alpha1.NodePool) (*ovhcloud.SecurityGroup, error) {
+	securityGroupName := fmt.Sprintf("%s-%s", nodePool.Namespace, nodePool.Name)
+
+	// Convert firewall rules to OVHcloud security group rules
+	rules := make([]ovhcloud.SecurityRule, 0, len(nodePool.Spec.FirewallRules))
+	for _, rule := range nodePool.Spec.FirewallRules {
+		// Parse port (assuming single port for now, not ranges)
+		var port int
+		fmt.Sscanf(rule.Port, "%d", &port)
+
+		rules = append(rules, ovhcloud.SecurityRule{
+			Direction:  ovhcloud.DirectionIngress,
+			Protocol:   rule.Protocol,
+			PortFrom:   port,
+			PortTo:     port,
+			SourceCIDR: "0.0.0.0/0", // Allow from any source
+		})
+	}
+
+	return r.OVHCloudClient.GetOrCreateSecurityGroup(ctx, securityGroupName, rules)
+}
+
+func (r *NodePoolReconciler) countReadyOVHInstances(instances []ovhcloud.Instance) int {
+	ready := 0
+	for _, instance := range instances {
+		if instance.Status == "ACTIVE" {
+			ready++
+		}
+	}
+	return ready
+}
+
+func (r *NodePoolReconciler) getOVHInstanceNames(instances []ovhcloud.Instance) []string {
+	names := make([]string, len(instances))
+	for i, instance := range instances {
+		names[i] = instance.Name
+	}
+	return names
 }
 
 func (r *NodePoolReconciler) updateStatus(

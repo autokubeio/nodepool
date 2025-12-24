@@ -25,7 +25,8 @@ type CloudProvider string
 
 // Supported cloud providers
 const (
-	CloudProviderHetzner CloudProvider = "hetzner"
+	CloudProviderHetzner  CloudProvider = "hetzner"
+	CloudProviderOVHcloud CloudProvider = "ovhcloud"
 	// Future providers can be added here:
 	// CloudProviderAWS     CloudProvider = "aws"
 	// CloudProviderGCP     CloudProvider = "gcp"
@@ -34,9 +35,9 @@ const (
 
 // NodePoolSpec defines the desired state of NodePool
 type NodePoolSpec struct {
-	// Provider is the cloud provider (e.g., hetzner)
+	// Provider is the cloud provider (e.g., hetzner, ovhcloud)
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=hetzner
+	// +kubebuilder:validation:Enum=hetzner;ovhcloud
 	// +kubebuilder:default=hetzner
 	Provider CloudProvider `json:"provider"`
 
@@ -44,6 +45,11 @@ type NodePoolSpec struct {
 	// Required when provider is "hetzner"
 	// +optional
 	HetznerConfig *HetznerCloudConfig `json:"hetznerConfig,omitempty"`
+
+	// OVHcloudConfig contains OVHcloud Public Cloud specific configuration
+	// Required when provider is "ovhcloud"
+	// +optional
+	OVHcloudConfig *OVHcloudConfig `json:"ovhcloudConfig,omitempty"`
 
 	// MinNodes is the minimum number of nodes in the pool
 	// +kubebuilder:validation:Minimum=0
@@ -116,6 +122,41 @@ type HetznerCloudConfig struct {
 	// Network is the Hetzner Cloud network ID or name to attach nodes to
 	// +optional
 	Network string `json:"network,omitempty"`
+}
+
+// OVHcloudConfig contains OVHcloud Public Cloud specific configuration
+type OVHcloudConfig struct {
+	// FlavorName is the flavor (instance type) name to use for instances (e.g., "b3-8", "c2-7")
+	// Either FlavorName or FlavorID must be specified
+	// +optional
+	FlavorName string `json:"flavorName,omitempty"`
+
+	// FlavorID is the flavor (instance type) UUID to use for instances
+	// Either FlavorName or FlavorID must be specified
+	// +optional
+	FlavorID string `json:"flavorID,omitempty"`
+
+	// Region is the OVHcloud region (e.g., GRA11, SBG5, BHS5, US-EAST-VA-1)
+	// +kubebuilder:validation:Required
+	Region string `json:"region"`
+
+	// ImageName is the OS image name to use for instances (e.g., "Ubuntu 22.04")
+	// Either ImageName or ImageID must be specified
+	// +optional
+	ImageName string `json:"imageName,omitempty"`
+
+	// ImageID is the OS image UUID to use for instances
+	// Either ImageName or ImageID must be specified
+	// +optional
+	ImageID string `json:"imageID,omitempty"`
+
+	// NetworkID is the OVHcloud private network ID (vRack) to attach instances to
+	// +optional
+	NetworkID string `json:"networkID,omitempty"`
+
+	// ProjectID is the OVHcloud project ID
+	// +kubebuilder:validation:Required
+	ProjectID string `json:"projectID"`
 }
 
 // FirewallRule defines a single firewall rule

@@ -26,6 +26,7 @@ help: ## Display this help.
 .PHONY: manifests
 manifests: controller-gen ## Generate CRD manifests.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	cp config/crd/bases/autokube.io_nodepools.yaml charts/nodepool/templates/crd.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.

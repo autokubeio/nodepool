@@ -40,6 +40,7 @@ import (
 	"github.com/autokubeio/autokube/internal/controller"
 	"github.com/autokubeio/autokube/internal/hetzner"
 	"github.com/autokubeio/autokube/internal/metrics"
+	"github.com/autokubeio/autokube/internal/ovhcloud"
 	"github.com/autokubeio/autokube/internal/reliability"
 	"github.com/autokubeio/autokube/internal/security"
 )
@@ -178,6 +179,30 @@ func main() {
 	circuitBreaker := reliability.NewCircuitBreaker(reliability.DefaultCircuitBreakerConfig())
 	hcloudClient := hetzner.NewClient(hcloudToken, hetzner.WithCircuitBreaker(circuitBreaker))
 
+	// Initialize OVHcloud client if credentials are available
+	var ovhcloudClient ovhcloud.ClientInterface
+	ovhEndpoint := os.Getenv("OVHCLOUD_ENDPOINT")
+	ovhAppKey := os.Getenv("OVHCLOUD_APPLICATION_KEY")
+	ovhAppSecret := os.Getenv("OVHCLOUD_APPLICATION_SECRET")
+	ovhConsumerKey := os.Getenv("OVHCLOUD_CONSUMER_KEY")
+	ovhProjectID := os.Getenv("OVHCLOUD_PROJECT_ID")
+	ovhRegion := os.Getenv("OVHCLOUD_REGION")
+
+	if ovhEndpoint != "" && ovhAppKey != "" && ovhAppSecret != "" && ovhConsumerKey != "" {
+		setupLog.Info("Initializing OVHcloud client", "endpoint", ovhEndpoint, "region", ovhRegion)
+		ovhcloudClient = ovhcloud.NewClient(
+			ovhEndpoint,
+			ovhAppKey,
+			ovhAppSecret,
+			ovhConsumerKey,
+			ovhProjectID,
+			ovhRegion,
+			ovhcloud.WithCircuitBreaker(circuitBreaker),
+		)
+	} else {
+		setupLog.Info("OVHcloud credentials not provided, OVHcloud provider will not be available")
+	}
+
 	// Initialize metrics collector
 	metricsCollector := metrics.NewCollector()
 
@@ -209,6 +234,7 @@ func main() {
 		Client:             mgr.GetClient(),
 		Scheme:             mgr.GetScheme(),
 		HCloudClient:       hcloudClient,
+		OVHCloudClient:     ovhcloudClient,
 		MetricsClient:      metricsCollector,
 		KubeClient:         kubeClient,
 		BootstrapManager:   bootstrapManager,

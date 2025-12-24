@@ -38,3 +38,4 @@ dist/
 # Debug binaries
 __debug_bin*
 .env
+tools/

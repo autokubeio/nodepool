@@ -1,0 +1,54 @@
+apiVersion: autokube.io/v1alpha1
+kind: NodePool
+metadata:
+  name: ovhcloud-worker-pool
+  namespace: default
+spec:
+  provider: ovhcloud
+  
+  # OVHcloud Public Cloud configuration
+  ovhcloudConfig:
+    flavorName: b3-8         # Flavor name (b3-8, b2-7, c2-7, r2-15, etc.)
+    region: US-EAST-VA-1     # US Region (US-EAST-VA-1, US-WEST-OR-1)
+    imageName: Ubuntu 22.04  # OS image name
+    networkID: ""            # Optional: vRack private network ID
+    projectID: "2fd3421e998047db85cb95d562c01b6e"  # Your OVHcloud project ID
+  
+  minNodes: 1
+  maxNodes: 5
+  targetNodes: 1
+  autoScalingEnabled: true
+  scaleUpThreshold: 5
+  scaleDownThreshold: 30
+  
+  # Automatic cluster joining with kubeadm
+  bootstrap:
+    type: kubeadm
+    apiServerEndpoint: "91.107.240.60:6443"  # Your Kubernetes API server (publicly accessible)
+    autoGenerateToken: true
+    kubernetesVersion: "1.29"
+  
+  labels:
+    role: worker
+    environment: production
+    provider: ovhcloud
+  
+  # Firewall rules (will be converted to security group rules)
+  firewallRules:
+    - port: "80"
+      protocol: tcp
+      description: "HTTP traffic"
+    - port: "443"
+      protocol: tcp
+      description: "HTTPS traffic"
+    - port: "6443"
+      protocol: tcp
+      description: "Kubernetes API"
+  
+  # Custom commands after initialization
+  runCmd:
+    - echo "OVHcloud instance initialized"
+    - apt-get install -y htop vim
+  
+  sshKeys:
+    - my-ssh-key

@@ -28,7 +28,7 @@ A Kubernetes operator for autoscaling cloud nodes based on cluster load. This op
 ## Supported Cloud Providers
 
 - ✅ **Hetzner Cloud** - Production ready
-- 🔜 **OVHcloud** - Planned Q1 2026
+- � **OVHcloud** - In development (basic support available)
 - 🔜 **UpCloud** - Planned Q1 2026
 - 🔜 **DigitalOcean** - Planned Q1 2026
 - 🔜 **Scaleway** - Planned Q2 2026
@@ -37,6 +37,11 @@ A Kubernetes operator for autoscaling cloud nodes based on cluster load. This op
 - 🔜 **Contabo** - Planned Q3 2026
 
 The operator uses a provider-based architecture that makes it easy to add support for additional cloud providers. See [Adding Providers Guide](docs/ADDING_PROVIDERS.md) for details on implementing new providers.
+
+### Provider Documentation
+
+- [Hetzner Cloud Setup](docs/HETZNER_SETUP.md) - Full setup guide for Hetzner Cloud
+- [OVHcloud Setup](docs/OVHCLOUD_SETUP.md) - Setup guide for OVHcloud Public Cloud
 
 ## Architecture
 

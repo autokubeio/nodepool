@@ -253,11 +253,56 @@ spec:
                 description: MinNodes is the minimum number of nodes in the pool
                 minimum: 0
                 type: integer
+              ovhcloudConfig:
+                description: |-
+                  OVHcloudConfig contains OVHcloud Public Cloud specific configuration
+                  Required when provider is "ovhcloud"
+                properties:
+                  flavorID:
+                    description: |-
+                      FlavorID is the flavor (instance type) UUID to use for instances
+                      Either FlavorName or FlavorID must be specified
+                    type: string
+                  flavorName:
+                    description: |-
+                      FlavorName is the flavor (instance type) name to use for instances (e.g., "b3-8", "c2-7")
+                      Either FlavorName or FlavorID must be specified
+                    type: string
+                  imageID:
+                    description: |-
+                      ImageID is the OS image UUID to use for instances
+                      Either ImageName or ImageID must be specified
+                    type: string
+                  imageName:
+                    description: |-
+                      ImageName is the OS image name to use for instances (e.g., "Ubuntu 22.04")
+                      Either ImageName or ImageID must be specified
+                    type: string
+                  networkID:
+                    description: NetworkID is the OVHcloud private network ID (vRack)
+                      to attach instances to
+                    type: string
+                  projectID:
+                    description: ProjectID is the OVHcloud project ID
+                    type: string
+                  region:
+                    description: Region is the OVHcloud region (e.g., GRA11, SBG5,
+                      BHS5, US-EAST-VA-1)
+                    type: string
+                  sshKeyID:
+                    description: SSHKeyID is the OVHcloud SSH key ID to add to instances
+                      for SSH access
+                    type: string
+                required:
+                - projectID
+                - region
+                type: object
               provider:
                 default: hetzner
-                description: Provider is the cloud provider (e.g., hetzner)
+                description: Provider is the cloud provider (e.g., hetzner, ovhcloud)
                 enum:
                 - hetzner
+                - ovhcloud
                 type: string
               runCmd:
                 description: RunCmd contains commands to run after node initialization
