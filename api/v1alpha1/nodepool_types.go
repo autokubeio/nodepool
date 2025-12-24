@@ -126,13 +126,13 @@ type HetznerCloudConfig struct {
 
 // OVHcloudConfig contains OVHcloud Public Cloud specific configuration
 type OVHcloudConfig struct {
-	// FlavorName is the flavor (instance type) name to use for instances (e.g., "b3-8", "c2-7")
-	// Either FlavorName or FlavorID must be specified
+	// Flavor is the flavor (instance type) name to use for instances (e.g., "b3-8", "c2-7")
+	// Either Flavor or FlavorID must be specified
 	// +optional
-	FlavorName string `json:"flavorName,omitempty"`
+	Flavor string `json:"flavor,omitempty"`
 
 	// FlavorID is the flavor (instance type) UUID to use for instances
-	// Either FlavorName or FlavorID must be specified
+	// Either Flavor or FlavorID must be specified
 	// +optional
 	FlavorID string `json:"flavorID,omitempty"`
 
@@ -140,17 +140,23 @@ type OVHcloudConfig struct {
 	// +kubebuilder:validation:Required
 	Region string `json:"region"`
 
-	// ImageName is the OS image name to use for instances (e.g., "Ubuntu 22.04")
-	// Either ImageName or ImageID must be specified
+	// Image is the OS image name to use for instances (e.g., "Ubuntu 22.04")
+	// Either Image or ImageID must be specified
 	// +optional
-	ImageName string `json:"imageName,omitempty"`
+	Image string `json:"image,omitempty"`
 
 	// ImageID is the OS image UUID to use for instances
-	// Either ImageName or ImageID must be specified
+	// Either Image or ImageID must be specified
 	// +optional
 	ImageID string `json:"imageID,omitempty"`
 
+	// Network is the OVHcloud private network name (vRack) to attach instances to
+	// Either Network or NetworkID can be specified
+	// +optional
+	Network string `json:"network,omitempty"`
+
 	// NetworkID is the OVHcloud private network ID (vRack) to attach instances to
+	// Either Network or NetworkID can be specified
 	// +optional
 	NetworkID string `json:"networkID,omitempty"`
 

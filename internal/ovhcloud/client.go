@@ -44,6 +44,8 @@ type ClientInterface interface {
 	GetFlavorIDByName(ctx context.Context, region, flavorName string) (string, error)
 	GetImageIDByName(ctx context.Context, region, imageName string) (string, error)
 	GetSSHKeyIDByName(ctx context.Context, sshKeyName string) (string, error)
+	GetNetworkIDByName(ctx context.Context, region, networkName string) (string, error)
+	GetPublicNetworkID(ctx context.Context, region string) (string, error)
 }
 
 // InstanceCreateError is a custom error type for instance creation failures
@@ -235,10 +237,37 @@ func (c *Client) CreateInstance(ctx context.Context, config InstanceConfig) (*In
 	}
 	// Note: If no SSH key provided, OVHcloud may still create the instance without SSH access
 
-	// Add network if provided
+	// Add network configuration
+	// When private network is specified, we need to explicitly include both:
+	// 1. Public network for internet access
+	// 2. Private network for internal communication
 	if config.NetworkID != "" {
-		createReq["networks"] = []string{config.NetworkID}
+		// Get public network ID for the region
+		publicNetID, err := c.GetPublicNetworkID(ctx, config.Region)
+		if err != nil {
+			// If we can't get public network, continue without it and log
+			// Instance will only have private IP
+			fmt.Printf("Warning: Could not get public network for region %s: %v\n", config.Region, err)
+			createReq["networks"] = []map[string]interface{}{
+				{
+					"networkId": config.NetworkID, // Private network only
+				},
+			}
+		} else {
+			// Include both public and private networks
+			createReq["networks"] = []map[string]interface{}{
+				{
+					"networkId": publicNetID, // Public network
+				},
+				{
+					"networkId": config.NetworkID, // Private network
+				},
+			}
+		}
 	}
+	// If no private network specified, public IP will be assigned by default
+
+	createReq["monthlyBilling"] = false
 
 	// API endpoint: POST /cloud/project/{serviceName}/instance
 	var response struct {
@@ -443,4 +472,85 @@ func (c *Client) GetSSHKeyIDByName(ctx context.Context, sshKeyName string) (stri
 	}
 
 	return "", fmt.Errorf("SSH key with name '%s' not found", sshKeyName)
+}
+
+// GetNetworkIDByName resolves a network name to its UUID
+func (c *Client) GetNetworkIDByName(ctx context.Context, region, networkName string) (string, error) {
+	if c.ovhClient == nil {
+		return "", fmt.Errorf("OVHcloud client not initialized")
+	}
+
+	// Query networks API - returns array of network objects
+	type NetworkRegion struct {
+		Region string `json:"region"`
+		Status string `json:"status"`
+	}
+
+	type Network struct {
+		ID      string          `json:"id"`
+		Name    string          `json:"name"`
+		Regions []NetworkRegion `json:"regions"`
+		Status  string          `json:"status"`
+	}
+
+	var networks []Network
+	endpoint := fmt.Sprintf("/cloud/project/%s/network/private", c.projectID)
+	if err := c.ovhClient.GetWithContext(ctx, endpoint, &networks); err != nil {
+		return "", fmt.Errorf("failed to list networks: %w", err)
+	}
+
+	// Match by name and region
+	for _, network := range networks {
+		if network.Name == networkName && network.Status == "ACTIVE" {
+			// Check if network is available in the specified region
+			for _, netRegion := range network.Regions {
+				if netRegion.Region == region && netRegion.Status == "ACTIVE" {
+					return network.ID, nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("network with name '%s' not found in region '%s' or not active", networkName, region)
+}
+
+// GetPublicNetworkID retrieves the public network ID for a specific region
+func (c *Client) GetPublicNetworkID(ctx context.Context, region string) (string, error) {
+	if c.ovhClient == nil {
+		return "", fmt.Errorf("OVHcloud client not initialized")
+	}
+
+	// Query public networks (Ext-Net) for the region
+	type NetworkRegion struct {
+		Region string `json:"region"`
+		Status string `json:"status"`
+	}
+
+	type Network struct {
+		ID      string          `json:"id"`
+		Name    string          `json:"name"`
+		Regions []NetworkRegion `json:"regions"`
+		Status  string          `json:"status"`
+		Type    string          `json:"type"`
+	}
+
+	var networks []Network
+	endpoint := fmt.Sprintf("/cloud/project/%s/network/public", c.projectID)
+	if err := c.ovhClient.GetWithContext(ctx, endpoint, &networks); err != nil {
+		return "", fmt.Errorf("failed to list public networks: %w", err)
+	}
+
+	// Find the public network for the specified region
+	for _, network := range networks {
+		if network.Status == "ACTIVE" {
+			// Check if network is available in the specified region
+			for _, netRegion := range network.Regions {
+				if netRegion.Region == region && netRegion.Status == "ACTIVE" {
+					return network.ID, nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("public network not found in region '%s'", region)
 }

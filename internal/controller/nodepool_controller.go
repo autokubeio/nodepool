@@ -336,32 +336,32 @@ func (r *NodePoolReconciler) createOVHcloudInstance(ctx context.Context, nodePoo
 
 	config := nodePool.Spec.OVHcloudConfig
 
-	// Resolve FlavorID from FlavorName if needed
+	// Resolve FlavorID from Flavor if needed
 	flavorID := config.FlavorID
-	if flavorID == "" && config.FlavorName != "" {
-		resolvedID, err := r.OVHCloudClient.GetFlavorIDByName(ctx, config.Region, config.FlavorName)
+	if flavorID == "" && config.Flavor != "" {
+		resolvedID, err := r.OVHCloudClient.GetFlavorIDByName(ctx, config.Region, config.Flavor)
 		if err != nil {
-			return fmt.Errorf("failed to resolve flavor name '%s': %w", config.FlavorName, err)
+			return fmt.Errorf("failed to resolve flavor name '%s': %w", config.Flavor, err)
 		}
 		flavorID = resolvedID
-		logger.Info("Resolved flavor name to ID", "flavorName", config.FlavorName, "flavorID", flavorID)
+		logger.Info("Resolved flavor name to ID", "flavor", config.Flavor, "flavorID", flavorID)
 	}
 	if flavorID == "" {
-		return fmt.Errorf("either flavorName or flavorID must be specified")
+		return fmt.Errorf("either flavor or flavorID must be specified")
 	}
 
-	// Resolve ImageID from ImageName if needed
+	// Resolve ImageID from Image if needed
 	imageID := config.ImageID
-	if imageID == "" && config.ImageName != "" {
-		resolvedID, err := r.OVHCloudClient.GetImageIDByName(ctx, config.Region, config.ImageName)
+	if imageID == "" && config.Image != "" {
+		resolvedID, err := r.OVHCloudClient.GetImageIDByName(ctx, config.Region, config.Image)
 		if err != nil {
-			return fmt.Errorf("failed to resolve image name '%s': %w", config.ImageName, err)
+			return fmt.Errorf("failed to resolve image name '%s': %w", config.Image, err)
 		}
 		imageID = resolvedID
-		logger.Info("Resolved image name to ID", "imageName", config.ImageName, "imageID", imageID)
+		logger.Info("Resolved image name to ID", "image", config.Image, "imageID", imageID)
 	}
 	if imageID == "" {
-		return fmt.Errorf("either imageName or imageID must be specified")
+		return fmt.Errorf("either image or imageID must be specified")
 	}
 
 	// Get or create security group if firewall rules are specified
@@ -389,6 +389,17 @@ func (r *NodePoolReconciler) createOVHcloudInstance(ctx context.Context, nodePoo
 		logger.Info("Resolved SSH key name to ID", "sshKeyName", sshKeyName, "sshKeyID", keyID)
 	}
 
+	// Resolve NetworkID from Network if needed
+	networkID := config.NetworkID
+	if networkID == "" && config.Network != "" {
+		resolvedID, err := r.OVHCloudClient.GetNetworkIDByName(ctx, config.Region, config.Network)
+		if err != nil {
+			return fmt.Errorf("failed to resolve network name '%s': %w", config.Network, err)
+		}
+		networkID = resolvedID
+		logger.Info("Resolved network name to ID", "network", config.Network, "networkID", networkID)
+	}
+
 	// Create a longer context for instance creation (OVHcloud can take 30-60s)
 	createCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -399,7 +410,7 @@ func (r *NodePoolReconciler) createOVHcloudInstance(ctx context.Context, nodePoo
 		ImageID:         imageID,
 		Region:          config.Region,
 		ProjectID:       config.ProjectID,
-		NetworkID:       config.NetworkID,
+		NetworkID:       networkID,
 		SSHKeys:         sshKeyIDs,
 		Labels:          labels,
 		UserData:        userData,

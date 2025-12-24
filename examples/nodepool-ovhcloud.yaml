@@ -8,10 +8,11 @@ spec:
   
   # OVHcloud Public Cloud configuration
   ovhcloudConfig:
-    flavorName: b3-8         # Flavor name (b3-8, b2-7, c2-7, r2-15, etc.)
+    flavor: b3-8             # Flavor name (b3-8, b2-7, c2-7, r2-15, etc.)
     region: US-EAST-VA-1     # US Region (US-EAST-VA-1, US-WEST-OR-1)
-    imageName: Ubuntu 22.04  # OS image name
-    networkID: ""            # Optional: vRack private network ID
+    image: Ubuntu 22.04      # OS image name
+    network: "network-1"     # Optional: vRack private network name (will be resolved to ID)
+    # networkID: "network-id" # Optional: vRack private network ID (use if you have the ID)
     projectID: "2fd3421e998047db85cb95d562c01b6e"  # Your OVHcloud project ID
   
   minNodes: 1
