@@ -63,14 +63,14 @@ helm repo update
 2. **Create a namespace:**
 
 ```bash
-kubectl create namespace hcloud-system
+kubectl create namespace nodepool-system
 ```
 
 3. **Install the operator with your Hetzner Cloud token:**
 
 ```bash
-helm install nodepool nodepool/nodepool \
-  --namespace hcloud-system \
+helm install nodepool-operator nodepool/nodepool \
+  --namespace nodepool-system \
   --set hcloudToken=<YOUR_HCLOUD_TOKEN>
 ```
 
@@ -80,42 +80,61 @@ helm install nodepool nodepool/nodepool \
 # Create secret with your token
 kubectl create secret generic hcloud-token \
   --from-literal=token=<YOUR_HCLOUD_TOKEN> \
-  -n hcloud-system
+  -n nodepool-system
 
 # Install with existing secret
-helm install nodepool nodepool/nodepool \
-  --namespace hcloud-system \
+helm install nodepool-operator nodepool/nodepool \
+  --namespace nodepool-system \
   --set hcloudTokenSecret=hcloud-token
 ```
 
 4. **Verify the installation:**
 
 ```bash
-kubectl get pods -n hcloud-system
+kubectl get pods -n nodepool-system
 kubectl get crd nodepools.hcloud.autokube.io
 ```
 
 ### Manual Installation
 
+**Option 1: All-in-One Manifest (Easiest)**
+
+```bash
+# Download and apply the complete installation manifest
+kubectl apply -f https://raw.githubusercontent.com/autokubeio/nodepool/main/dist/install.yaml
+
+# Create namespace and secret
+kubectl create namespace nodepool-system
+kubectl create secret generic hcloud-credentials \
+  --from-literal=token=<YOUR_HCLOUD_TOKEN> \
+  -n nodepool-system
+```
+
+**Option 2: Step-by-Step Installation**
+
 1. **Apply the CRD:**
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/autokubeio/nodepool/main/charts/nodepool/templates/crd.yaml
+kubectl apply -f https://raw.githubusercontent.com/autokubeio/nodepool/main/config/crd/bases/hcloud.autokube.io_nodepools.yaml
 ```
 
 2. **Create the namespace and secret:**
 
 ```bash
-kubectl create namespace hcloud-system
+kubectl create namespace nodepool-system
 kubectl create secret generic hcloud-token \
   --from-literal=token=<YOUR_HCLOUD_TOKEN> \
-  -n hcloud-system
+  -n nodepool-system
 ```
 
 3. **Deploy the operator:**
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/autokubeio/nodepool/main/deploy/operator.yaml
+# Apply RBAC
+kubectl apply -f https://raw.githubusercontent.com/autokubeio/nodepool/main/config/rbac/role.yaml
+
+# Apply manager deployment
+kubectl apply -f https://raw.githubusercontent.com/autokubeio/nodepool/main/config/manager/manager.yaml
 ```
 
 ## Usage
@@ -808,7 +827,7 @@ spec:
 ### Check operator logs
 
 ```bash
-kubectl logs -n hcloud-system deployment/nodepool -f
+kubectl logs -n nodepool-system deployment/nodepool -f
 ```
 
 ### Common Issues

@@ -21,15 +21,41 @@ import (
 	"bytes"
 	"fmt"
 	"text/template"
+
+	"github.com/autokubeio/autokube/internal/security"
 )
 
-// CloudInitGenerator generates cloud-init scripts for different cluster types
+// CloudInitGenerator generates cloud-init configurations
 type CloudInitGenerator struct {
+	secretsManager *security.SecretsManager
+}
+
+// CloudInitGeneratorOption is a function that configures a CloudInitGenerator
+type CloudInitGeneratorOption func(*CloudInitGenerator)
+
+// WithSecretsManager sets a secrets manager for encryption
+func WithSecretsManager(sm *security.SecretsManager) CloudInitGeneratorOption {
+	return func(g *CloudInitGenerator) {
+		g.secretsManager = sm
+	}
 }
 
 // NewCloudInitGenerator creates a new cloud-init generator
-func NewCloudInitGenerator() *CloudInitGenerator {
-	return &CloudInitGenerator{}
+func NewCloudInitGenerator(opts ...CloudInitGeneratorOption) *CloudInitGenerator {
+	g := &CloudInitGenerator{}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g
+}
+
+// EncryptSensitiveData encrypts sensitive data if encryption is enabled
+func (g *CloudInitGenerator) EncryptSensitiveData(data string) (string, error) {
+	if g.secretsManager == nil {
+		// If no secrets manager, return data as-is (backward compatibility)
+		return data, nil
+	}
+	return g.secretsManager.EncryptData(data)
 }
 
 // GenerateKubeadmCloudInit generates cloud-init for kubeadm clusters

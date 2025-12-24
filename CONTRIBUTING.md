@@ -43,10 +43,31 @@ make test
 
 # Build the binary
 make build
+```
 
-# Run locally (requires kubeconfig)
-export HCLOUD_TOKEN=your-token-here
-make run
+### Usage Examples
+
+**Using environment variable (traditional):**
+```bash
+export HCLOUD_TOKEN="your-64-char-token"
+./manager
+```
+
+**Using Kubernetes Secret (recommended):**
+```bash
+# Create secret
+kubectl create secret generic hcloud-credentials \
+  --from-literal=token=your-64-char-token \
+  -n nodepool-system
+
+# Run with secret
+./manager --use-k8s-secret --secret-namespace=nodepool-system
+```
+
+**With encryption for cloud-init:**
+```bash
+export ENCRYPTION_KEY="your-32-byte-encryption-key"
+./manager --use-k8s-secret
 ```
 
 ## Code Guidelines

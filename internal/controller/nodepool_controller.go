@@ -37,6 +37,7 @@ import (
 	"github.com/autokubeio/autokube/internal/bootstrap"
 	"github.com/autokubeio/autokube/internal/hetzner"
 	"github.com/autokubeio/autokube/internal/metrics"
+	"github.com/autokubeio/autokube/internal/reliability"
 )
 
 const (
@@ -49,11 +50,12 @@ const (
 type NodePoolReconciler struct {
 	client.Client
 	Scheme             *runtime.Scheme
-	HCloudClient       *hetzner.Client
+	HCloudClient       hetzner.ClientInterface
 	MetricsClient      *metrics.Collector
 	KubeClient         kubernetes.Interface
 	BootstrapManager   *bootstrap.BootstrapTokenManager
 	CloudInitGenerator *bootstrap.CloudInitGenerator
+	DeadLetterQueue    *reliability.DeadLetterQueue
 }
 
 // +kubebuilder:rbac:groups=hcloud.autokube.io,resources=nodepools,verbs=get;list;watch;create;update;patch;delete

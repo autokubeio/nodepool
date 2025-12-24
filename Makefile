@@ -41,7 +41,7 @@ vet: ## Run go vet against code.
 
 .PHONY: test
 test: fmt vet ## Run tests.
-	go test ./... -coverprofile cover.out
+	go test ./...
 
 .PHONY: lint
 lint: ## Run golangci-lint linter
@@ -81,14 +81,14 @@ uninstall: ## Uninstall CRDs from the K8s cluster.
 
 .PHONY: deploy
 deploy: ## Deploy controller to the K8s cluster.
-	helm upgrade --install nodepool ./charts/nodepool \
-		--namespace hcloud-system --create-namespace \
+	helm upgrade --install nodepool-operator ./charts/nodepool \
+		--namespace nodepool-system --create-namespace \
 		--set image.repository=$(shell echo ${IMG} | cut -d':' -f1) \
 		--set image.tag=$(shell echo ${IMG} | cut -d':' -f2)
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster.
-	helm uninstall nodepool --namespace hcloud-system
+	helm uninstall nodepool-operator --namespace nodepool-system
 
 ##@ Helm
 
@@ -99,6 +99,34 @@ helm-lint: ## Lint Helm chart.
 .PHONY: helm-package
 helm-package: ## Package Helm chart.
 	helm package charts/nodepool -d dist/
+
+.PHONY: release-manifests
+release-manifests: manifests ## Generate combined installation manifest for GitHub releases
+	@echo "Generating release manifests..."
+	@mkdir -p dist
+	@echo "# NodePool Operator - Complete Installation Manifest" > dist/install.yaml
+	@echo "# This manifest includes CRDs, RBAC, and Deployment" >> dist/install.yaml
+	@echo "# Apply with: kubectl apply -f install.yaml" >> dist/install.yaml
+	@echo "" >> dist/install.yaml
+	@echo "# ============================================" >> dist/install.yaml
+	@echo "# Custom Resource Definitions (CRDs)" >> dist/install.yaml
+	@echo "# ============================================" >> dist/install.yaml
+	@cat config/crd/bases/hcloud.autokube.io_nodepools.yaml >> dist/install.yaml
+	@echo "" >> dist/install.yaml
+	@echo "---" >> dist/install.yaml
+	@echo "# ============================================" >> dist/install.yaml
+	@echo "# RBAC Configuration" >> dist/install.yaml
+	@echo "# ============================================" >> dist/install.yaml
+	@cat config/rbac/role.yaml >> dist/install.yaml
+	@echo "" >> dist/install.yaml
+	@echo "---" >> dist/install.yaml
+	@echo "# ============================================" >> dist/install.yaml
+	@echo "# Controller Deployment" >> dist/install.yaml
+	@echo "# ============================================" >> dist/install.yaml
+	@cat config/manager/manager.yaml >> dist/install.yaml
+	@echo "" >> dist/install.yaml
+	@echo "✅ Release manifests generated in dist/install.yaml"
+	@echo "📦 Apply with: kubectl apply -f dist/install.yaml"
 
 .PHONY: helm-install
 helm-install: ## Install Helm chart locally.

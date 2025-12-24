@@ -23,11 +23,51 @@ import (
 	"strconv"
 
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
+
+	"github.com/autokubeio/autokube/internal/reliability"
 )
+
+// ClientInterface defines the interface for interacting with Hetzner Cloud
+type ClientInterface interface {
+	ListServers(ctx context.Context, nodePoolName, namespace string) ([]Server, error)
+	CreateServer(ctx context.Context, config ServerConfig) (*Server, error)
+	DeleteServer(ctx context.Context, serverID int64) error
+	GetServer(ctx context.Context, serverID int64) (*Server, error)
+	GetOrCreateFirewall(ctx context.Context, name string, rules []hcloud.FirewallRule) (*hcloud.Firewall, error)
+	DeleteFirewall(ctx context.Context, firewallID int64) error
+}
+
+// ServerCreateError is a custom error type for server creation failures
+type ServerCreateError struct {
+	Message string
+}
+
+func (e *ServerCreateError) Error() string {
+	return fmt.Sprintf("server creation failed: %s", e.Message)
+}
 
 // Client wraps the Hetzner Cloud API client
 type Client struct {
-	client *hcloud.Client
+	client         *hcloud.Client
+	retryConfig    reliability.RetryConfig
+	circuitBreaker *reliability.CircuitBreaker
+}
+
+// ClientOption is a function that configures a Client
+type ClientOption func(*Client)
+
+// WithRetryConfig sets a custom retry configuration
+func WithRetryConfig(config reliability.RetryConfig) ClientOption {
+	return func(c *Client) {
+		c.retryConfig = config
+	}
+}
+
+// WithCircuitBreaker sets a circuit breaker
+func WithCircuitBreaker(cb *reliability.CircuitBreaker) ClientOption {
+	return func(c *Client) {
+		c.circuitBreaker = cb
+	}
 }
 
 // Server represents a Hetzner Cloud server
@@ -38,6 +78,20 @@ type Server struct {
 	IPv4      string
 	IPv6      string
 	PrivateIP string
+}
+
+// NewClient creates a new Hetzner Cloud client
+func NewClient(token string, opts ...ClientOption) *Client {
+	c := &Client{
+		client:      hcloud.NewClient(hcloud.WithToken(token)),
+		retryConfig: reliability.DefaultRetryConfig(),
+	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
 }
 
 // ServerConfig contains the configuration for creating a server
@@ -51,13 +105,6 @@ type ServerConfig struct {
 	UserData   string
 	Network    string
 	Firewalls  []int64 // Firewall IDs to attach to the server
-}
-
-// NewClient creates a new Hetzner Cloud client
-func NewClient(token string) *Client {
-	return &Client{
-		client: hcloud.NewClient(hcloud.WithToken(token)),
-	}
 }
 
 // ListServers lists all servers for a given node pool
@@ -91,7 +138,7 @@ func (c *Client) ListServers(ctx context.Context, nodePoolName, namespace string
 
 // CreateServer creates a new server in Hetzner Cloud
 //
-//nolint:funlen // Server creation involves multiple API calls and configuration steps
+//nolint:funlen,gocyclo // Server creation involves multiple API calls and configuration steps
 func (c *Client) CreateServer(ctx context.Context, config ServerConfig) (*Server, error) {
 	// Get server type
 	serverType, _, err := c.client.ServerType.GetByName(ctx, config.ServerType)
@@ -205,19 +252,32 @@ func (c *Client) CreateServer(ctx context.Context, config ServerConfig) (*Server
 			return nil, fmt.Errorf("failed to attach server to network: %w", err)
 		}
 
-		// Wait for the network attachment to complete
+		// Wait for the action to complete
 		_, errCh := c.client.Action.WatchProgress(ctx, action)
 		if err := <-errCh; err != nil {
 			return nil, fmt.Errorf("failed to wait for network attachment: %w", err)
 		}
 
 		// Refresh server data to get the assigned private IP
-		updatedServer, _, err := c.client.Server.GetByID(ctx, result.Server.ID)
+		var updatedServer *hcloud.Server
+
+		err = c.executeWithRetry(ctx, func() error {
+			var err error
+			updatedServer, _, err = c.client.Server.GetByID(ctx, result.Server.ID)
+			if err != nil {
+				return fmt.Errorf("failed to get server: %w", err)
+			}
+
+			if updatedServer == nil {
+				return fmt.Errorf("server not found")
+			}
+			return nil
+		})
+
 		if err != nil {
-			return nil, fmt.Errorf("failed to get updated server data: %w", err)
+			return nil, err
 		}
 
-		// Extract private IP from the private networks
 		if len(updatedServer.PrivateNet) > 0 {
 			server.PrivateIP = updatedServer.PrivateNet[0].IP.String()
 		}
@@ -310,4 +370,14 @@ func (c *Client) DeleteFirewall(ctx context.Context, firewallID int64) error {
 	}
 
 	return nil
+}
+
+// executeWithRetry executes an operation with retry logic
+func (c *Client) executeWithRetry(ctx context.Context, operation func() error) error {
+	if c.circuitBreaker != nil {
+		return c.circuitBreaker.Execute(func() error {
+			return reliability.RetryOperation(ctx, c.retryConfig, operation)
+		})
+	}
+	return reliability.RetryOperation(ctx, c.retryConfig, operation)
 }
