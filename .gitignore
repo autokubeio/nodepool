@@ -32,9 +32,6 @@ coverage.html
 *.tgz
 .helm
 
-# Build artifacts
-dist/
-
 # Debug binaries
 __debug_bin*
 .env
