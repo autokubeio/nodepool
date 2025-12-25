@@ -1,0 +1,50 @@
+apiVersion: v1
+entries:
+  nodepool:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2025-12-25T16:16:01.918916498Z"
+    description: A Helm chart for Multi-Cloud Kubernetes Autoscaler Operator
+    digest: dde95752d440661d66c5d4c3da24fcc47cb86a394c1738b1210e079c810e8900
+    home: https://github.com/autokubeio/nodepool
+    keywords:
+    - hetzner
+    - hcloud
+    - kubernetes
+    - nodepool
+    - autoscaler
+    - operator
+    maintainers:
+    - name: Mahyar Moghadam
+      url: https://github.com/autokubeio
+    name: nodepool
+    sources:
+    - https://github.com/autokubeio/nodepool
+    type: application
+    urls:
+    - https://autokubeio.github.io/nodepool/nodepool-0.1.0.tgz
+    version: 0.1.0
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2025-12-25T16:16:01.920037796Z"
+    description: A Helm chart for Multi-Cloud Kubernetes Autoscaler Operator
+    digest: dde95752d440661d66c5d4c3da24fcc47cb86a394c1738b1210e079c810e8900
+    home: https://github.com/autokubeio/nodepool
+    keywords:
+    - hetzner
+    - hcloud
+    - kubernetes
+    - nodepool
+    - autoscaler
+    - operator
+    maintainers:
+    - name: Mahyar Moghadam
+      url: https://github.com/autokubeio
+    name: nodepool
+    sources:
+    - https://github.com/autokubeio/nodepool
+    type: application
+    urls:
+    - https://autokubeio.github.io/nodepool/dist/nodepool-0.1.0.tgz
+    version: 0.1.0
+generated: "2025-12-25T16:16:01.91781496Z"
