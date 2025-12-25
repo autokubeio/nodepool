@@ -88,6 +88,11 @@ spec:
         volumeMounts:
         - mountPath: /tmp
           name: tmp
+      tolerations:
+      # Allow scheduling on control-plane nodes for initial bootstrap
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
       terminationGracePeriodSeconds: 10
       volumes:
       - emptyDir: {}
