@@ -93,9 +93,12 @@ jobs:
       run: |
         git checkout gh-pages || git checkout --orphan gh-pages
         git rm -rf .
-        git checkout main -- dist/*.tgz
-        mv dist/*.tgz .
-        helm repo index --url https://${{ github.repository_owner }}.github.io/nodepool/ .
+
+        cp dist/*.tgz .
+
+        helm repo index \
+          --url https://${{ github.repository_owner }}.github.io/nodepool/ .
+
         git add *.tgz index.yaml
         git commit -m "Release ${{ github.ref_name }}"
         git push origin gh-pages
