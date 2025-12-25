@@ -556,6 +556,10 @@ spec:
         volumeMounts:
         - mountPath: /tmp
           name: tmp
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
       terminationGracePeriodSeconds: 10
       volumes:
       - emptyDir: {}
