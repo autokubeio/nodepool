@@ -3,9 +3,9 @@ entries:
   nodepool:
   - apiVersion: v2
     appVersion: 0.1.0
-    created: "2025-12-25T16:16:01.918916498Z"
+    created: "2025-12-25T17:08:59.505271757Z"
     description: A Helm chart for Multi-Cloud Kubernetes Autoscaler Operator
-    digest: dde95752d440661d66c5d4c3da24fcc47cb86a394c1738b1210e079c810e8900
+    digest: 61656a8d6ba851ce700089a1123832e87208356da2a1d4d16e4471b4b9b16025
     home: https://github.com/autokubeio/nodepool
     keywords:
     - hetzner
@@ -22,13 +22,13 @@ entries:
     - https://github.com/autokubeio/nodepool
     type: application
     urls:
-    - https://autokubeio.github.io/nodepool/nodepool-0.1.0.tgz
-    version: 0.1.0
+    - https://autokubeio.github.io/nodepool/nodepool-0.1.1.tgz
+    version: 0.1.1
   - apiVersion: v2
     appVersion: 0.1.0
-    created: "2025-12-25T16:16:01.920037796Z"
+    created: "2025-12-25T17:08:59.505775375Z"
     description: A Helm chart for Multi-Cloud Kubernetes Autoscaler Operator
-    digest: dde95752d440661d66c5d4c3da24fcc47cb86a394c1738b1210e079c810e8900
+    digest: 61656a8d6ba851ce700089a1123832e87208356da2a1d4d16e4471b4b9b16025
     home: https://github.com/autokubeio/nodepool
     keywords:
     - hetzner
@@ -45,6 +45,6 @@ entries:
     - https://github.com/autokubeio/nodepool
     type: application
     urls:
-    - https://autokubeio.github.io/nodepool/dist/nodepool-0.1.0.tgz
-    version: 0.1.0
-generated: "2025-12-25T16:16:01.91781496Z"
+    - https://autokubeio.github.io/nodepool/dist/nodepool-0.1.1.tgz
+    version: 0.1.1
+generated: "2025-12-25T17:08:59.504628339Z"
